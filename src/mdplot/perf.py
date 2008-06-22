@@ -29,12 +29,12 @@ import tables
 Plot computation time versus system size
 """
 def plot(args):
-    (name, variant) = (None, None)
+    name, variant = None, None
     data = {}
-    for fn in args.data:
+    for fn in args.input:
         f = None
         try:
-            f = tables.openFile(fn)
+            f = tables.openFile(fn, mode='r')
         except IOError:
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
@@ -97,8 +97,8 @@ def plot(args):
 
 
 def add_parser(subparsers):
-    parser = subparsers.add_parser(command, help='plot computation time versus system size')
-    parser.add_argument('data', nargs='+', help='HDF5 data files')
+    parser = subparsers.add_parser(command, help='computation time versus system size')
+    parser.add_argument('input', nargs='+', help='HDF5 data files')
     parser.add_argument('--output', required=True, help='output filename')
     parser.add_argument('--loglog', action='store_true', help='plot both axes with logarithmic scale')
 
