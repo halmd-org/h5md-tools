@@ -69,7 +69,7 @@ def plot(args):
             if dim == 3:
                 rr = rr + dr[:, 2] * dr[:, 2]
             # accumulate histogram of minimum image distances
-            h, bins = numpy.histogram(numpy.sqrt(rr), bins=args.bins, range=(0, box), new=True)
+            h, bins = numpy.histogram(numpy.sqrt(rr), bins=args.bins, range=(0, box / 2), new=True)
             H = H + 2 * h
 
     except tables.exceptions.NoSuchNodeError:
@@ -86,7 +86,7 @@ def plot(args):
     g = H / n / N
 
     plt.plot(bins[:-1], g, color='m')
-    plt.axis([0, box, 0, max(g)])
+    plt.axis([0, box / 2, 0, max(g)])
     plt.xlabel(r'particle distance $|\mathbf{r}_{ij}^*|$')
     plt.ylabel(r'pair distribution function $g(|\mathbf{r}_{ij}^*|)$')
     plt.savefig(args.output)
