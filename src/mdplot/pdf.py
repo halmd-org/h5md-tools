@@ -58,6 +58,7 @@ def plot(args):
         # particle density
         density = f.root.parameters.mdsim._v_attrs.density
 
+        cutoff = args.cutoff or box / 2
         H = numpy.zeros(args.bins)
         for (i, j) in enumerate(range(N - 1, 0, -1)):
             # particle distance vectors
@@ -69,7 +70,7 @@ def plot(args):
             if dim == 3:
                 rr = rr + dr[:, 2] * dr[:, 2]
             # accumulate histogram of minimum image distances
-            h, bins = numpy.histogram(numpy.sqrt(rr), bins=args.bins, range=(0, box / 2), new=True)
+            h, bins = numpy.histogram(numpy.sqrt(rr), bins=args.bins, range=(0, cutoff), new=True)
             H = H + 2 * h
 
     except tables.exceptions.NoSuchNodeError:
@@ -86,7 +87,7 @@ def plot(args):
     g = H / n / N
 
     plt.plot(bins[:-1], g, color='m')
-    plt.axis([0, box / 2, 0, max(g)])
+    plt.axis([0, cutoff, 0, max(g)])
     plt.xlabel(r'particle distance $|\mathbf{r}_{ij}| / \sigma$')
     plt.ylabel(r'pair distribution function $g(|\mathbf{r}_{ij}| / \sigma)$')
     plt.savefig(args.output)
@@ -97,6 +98,7 @@ def add_parser(subparsers):
     parser.add_argument('input', help='HDF5 data file')
     parser.add_argument('--sample', type=int, help='phase space sample number')
     parser.add_argument('--bins', type=int, help='number of histogram bins')
+    parser.add_argument('--cutoff', type=float, help='truncate function at given distance')
     parser.add_argument('--output', required=True, help='output filename')
     parser.set_defaults(sample=-1, bins=1000)
 
