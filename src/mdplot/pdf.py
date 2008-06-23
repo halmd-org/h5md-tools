@@ -83,7 +83,7 @@ def plot(args):
     # average number of atoms in ideal gas per interval
     n = Vn * density * (numpy.power(bins[1:], dim) - numpy.power(bins[:-1], dim))
     # compute pair correlation function
-    g = H / n / time / N
+    g = H / n / N
 
     plt.plot(bins[:-1], g, color='m')
     plt.axis([0, box, 0, max(g)])
