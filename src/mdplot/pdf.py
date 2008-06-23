@@ -58,19 +58,19 @@ def plot(args):
         # particle density
         density = f.root.parameters.mdsim._v_attrs.density
 
-        rij = numpy.zeros([N * (N - 1) / 2])
+        H = numpy.zeros(args.bins)
         for (i, j) in enumerate(range(N - 1, 0, -1)):
-            k = i * (N + j) / 2
-            # particle distance vector
+            # particle distance vectors
             dr = r[:j] - r[i + 1:]
-            # minimum image distance
+            # minimum image distances
             dr = dr - numpy.round(dr / box) * box
-            # squared particle distance
+            # squared minimum image distances
             rr = dr[:, 0] * dr[:, 0] + dr[:, 1] * dr[:, 1]
             if dim == 3:
                 rr = rr + dr[:, 2] * dr[:, 2]
-            # absolute particle distance
-            rij[k:(k + j)] = numpy.sqrt(rr)
+            # accumulate histogram of minimum image distances
+            h, bins = numpy.histogram(numpy.sqrt(rr), bins=args.bins, range=(0, box), new=True)
+            H = H + 2 * h
 
     except tables.exceptions.NoSuchNodeError:
         raise SystemExit('missing simulation data in file: %s' % args.input)
@@ -78,14 +78,12 @@ def plot(args):
     finally:
         f.close()
 
-    # compute particle distance histogram
-    h, bins = numpy.histogram(rij, bins=args.bins, new=True)
     # volume of n-dimensional unit sphere
     Vn = numpy.power(numpy.pi, dim / 2.) / gamma(dim / 2. + 1.)
     # average number of atoms in ideal gas per interval
     n = Vn * density * (numpy.power(bins[1:], dim) - numpy.power(bins[:-1], dim))
     # compute pair correlation function
-    g = (2 * h) / n / time / N
+    g = H / n / time / N
 
     plt.plot(bins[:-1], g, color='m')
     plt.axis([0, box, 0, max(g)])
