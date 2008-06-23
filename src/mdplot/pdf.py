@@ -21,12 +21,17 @@
 import os, os.path
 import matplotlib.pyplot as plt
 import numpy
+from scipy.special import gamma
 import sys
 import tables
 
 
 """
 Plot pair distribution function
+
+M.P. Allen and D.J. Tildesley,
+Computer Simulation of Liquids, 1989,
+Oxford University Press, pp. 55, 183-184
 """
 def plot(args):
     f = None
@@ -47,13 +52,15 @@ def plot(args):
         # periodic simulation box length
         box = f.root.parameters.mdsim._v_attrs.box_length
         # number of particles
-        n = f.root.parameters.mdsim._v_attrs.particles
+        N = f.root.parameters.mdsim._v_attrs.particles
         # positional coordinates dimension
         dim = f.root.parameters.mdsim._v_attrs.dimension
+        # particle density
+        density = f.root.parameters.mdsim._v_attrs.density
 
-        rij = numpy.zeros([n * (n - 1) / 2])
-        for (i, j) in enumerate(range(n - 1, 0, -1)):
-            k = i * (n + j) / 2
+        rij = numpy.zeros([N * (N - 1) / 2])
+        for (i, j) in enumerate(range(N - 1, 0, -1)):
+            k = i * (N + j) / 2
             # particle distance vector
             dr = r[:j] - r[i + 1:]
             # minimum image distance
@@ -71,8 +78,14 @@ def plot(args):
     finally:
         f.close()
 
+    # compute particle distance histogram
+    h, bins = numpy.histogram(rij, bins=args.bins, new=True)
+    # volume of n-dimensional unit sphere
+    Vn = numpy.power(numpy.pi, dim / 2.) / gamma(dim / 2. + 1.)
+    # average number of atoms in ideal gas per interval
+    n = Vn * density * (numpy.power(bins[1:], dim) - numpy.power(bins[:-1], dim))
     # compute pair correlation function
-    g, bins = numpy.histogram(rij, bins=args.bins, normed=True, new=True)
+    g = (2 * h) / n / time / N
 
     plt.plot(bins[:-1], g, color='m')
     plt.axis([0, box, 0, max(g)])
