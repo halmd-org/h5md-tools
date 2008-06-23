@@ -87,8 +87,8 @@ def plot(args):
 
     plt.plot(bins[:-1], g, color='m')
     plt.axis([0, box / 2, 0, max(g)])
-    plt.xlabel(r'particle distance $|\mathbf{r}_{ij}^*|$')
-    plt.ylabel(r'pair distribution function $g(|\mathbf{r}_{ij}^*|)$')
+    plt.xlabel(r'particle distance $|\mathbf{r}_{ij}| / \sigma$')
+    plt.ylabel(r'pair distribution function $g(|\mathbf{r}_{ij}| / \sigma)$')
     plt.savefig(args.output)
 
 
