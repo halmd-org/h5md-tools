@@ -21,7 +21,7 @@
 import os, os.path
 import glob
 import matplotlib.pyplot as plt
-from matplotlib import cm, ticker
+from matplotlib import ticker
 import numpy
 import subprocess
 import sys
@@ -85,7 +85,8 @@ def plot(args):
             # scale particle diameter from data units to points
             d = diameter * axscale / figscale
             if dim == 3:
-                plot = lambda x, y: ax.scatter(x, y, s=(d * d), c=(r[:, 2] / box), cmap=cm.hsv, edgecolors='none', alpha=0.75)
+                cmap = color_wheel(r[:, 2] / box)
+                plot = lambda x, y: ax.scatter(x, y, s=(d * d), c=cmap, edgecolors='none', alpha=0.9)
             else:
                 plot = lambda x, y: ax.plot(x, y, 'o', markersize=d, markerfacecolor='b', markeredgecolor='b', alpha=0.5)
             # plot projections of particles in simulation box
@@ -130,6 +131,18 @@ def plot(args):
     # remove plot files
     for g in glob.glob('%s_*.png' % fn):
         os.unlink(g)
+
+
+"""
+Convert array of uniform numbers to RGB tuples from color wheel
+"""
+def color_wheel(x):
+    triang = lambda x: (2 - numpy.abs(x)).clip(0.0, 1.0)
+    x = x * 6
+    r = triang(x - 2)
+    g = triang(x - 4)
+    b = triang(x - 6) + triang(x)
+    return zip(r, g, b)
 
 
 def add_parser(subparsers):
