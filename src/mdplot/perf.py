@@ -32,41 +32,43 @@ def plot(args):
     name, variant = None, None
     data = {}
     for fn in args.input:
-        f = None
         try:
             f = tables.openFile(fn, mode='r')
         except IOError:
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
+        # HDF5 root group
+        H5 = f.root
+
         try:
             # Lennard-Jones fluid or hardspheres simulation
             if name is None:
-                name = f.root.parameters.program._v_attrs.name
-            elif name != f.root.parameters.program._v_attrs.name:
+                name = H5.parameters.program._v_attrs.name
+            elif name != H5.parameters.program._v_attrs.name:
                 raise SystemExit('conflicting program name in file: %s' % fn)
             # program variant (e.g. +3D +CUDA +VVERLET +CELL)
             if variant is None:
-                variant = f.root.parameters.program._v_attrs.variant
-            elif variant != f.root.parameters.program._v_attrs.variant:
+                variant = H5.parameters.program._v_attrs.variant
+            elif variant != H5.parameters.program._v_attrs.variant:
                 raise SystemExit('conflicting program variant in file: %s' % fn)
 
-            density = f.root.parameters.mdsim._v_attrs.density
+            density = H5.parameters.mdsim._v_attrs.density
 
             if '+CUDA' in variant:
-                time = f.root.times.gpu.mdstep._v_attrs.mean
+                time = H5.times.gpu.mdstep._v_attrs.mean
             else:
-                time = f.root.times.host.mdstep._v_attrs.mean
+                time = H5.times.host.mdstep._v_attrs.mean
 
             if not density in data:
                 data[density] = {}
             if not args.loglog:
                 # number of particles in thousands
-                N = f.root.parameters.mdsim._v_attrs.particles / 1000
+                N = H5.parameters.mdsim._v_attrs.particles / 1000
                 # computation time in milliseconds
                 data[density][N] = time * 1000
             else:
                 # number of particles
-                N = f.root.parameters.mdsim._v_attrs.particles
+                N = H5.parameters.mdsim._v_attrs.particles
                 # computation time in seconds
                 data[density][N] = time
 

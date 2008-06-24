@@ -26,7 +26,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 from matplotlib import rc
-from mdplot import perf, pdf
+from mdplot import perf, pdf, traj
 
 
 # parse command line arguments
@@ -34,6 +34,7 @@ parser = argparse.ArgumentParser(prog='mdplot')
 subparsers = parser.add_subparsers(dest='command', help='available plot modules')
 perf.add_parser(subparsers)
 pdf.add_parser(subparsers)
+traj.add_parser(subparsers)
 args = parser.parse_args()
 
 # set matplotlib defaults
@@ -46,6 +47,8 @@ try:
         perf.plot(args)
     elif args.command == pdf.command:
         pdf.plot(args)
+    elif args.command == traj.command:
+        traj.plot(args)
 
 except SystemExit, status:
     exit('ERROR: %s' % status)

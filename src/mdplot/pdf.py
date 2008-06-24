@@ -34,29 +34,31 @@ Computer Simulation of Liquids, 1989,
 Oxford University Press, pp. 55, 183-184
 """
 def plot(args):
-    f = None
     try:
         f = tables.openFile(args.input, mode='r')
     except IOError:
         raise SystemExit('failed to open HDF5 file: %s' % args.input)
 
+    # HDF5 root group
+    H5 = f.root
+
     try:
         try:
             # particle positions of phase space sample
-            r = f.root.trajectory.positions[args.sample]
+            r = H5.trajectory.positions[args.sample]
             # simulation time
-            time = f.root.trajectory.time[args.sample]
+            time = H5.trajectory.time[args.sample]
         except IndexError:
             raise SystemExit('out-of-bounds phase space sample number')
 
         # periodic simulation box length
-        box = f.root.parameters.mdsim._v_attrs.box_length
+        box = H5.parameters.mdsim._v_attrs.box_length
         # number of particles
-        N = f.root.parameters.mdsim._v_attrs.particles
+        N = H5.parameters.mdsim._v_attrs.particles
         # positional coordinates dimension
-        dim = f.root.parameters.mdsim._v_attrs.dimension
+        dim = H5.parameters.mdsim._v_attrs.dimension
         # particle density
-        density = f.root.parameters.mdsim._v_attrs.density
+        density = H5.parameters.mdsim._v_attrs.density
 
         cutoff = args.cutoff or box / 2
         H = numpy.zeros(args.bins)
