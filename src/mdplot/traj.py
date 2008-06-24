@@ -21,7 +21,7 @@
 import os, os.path
 import glob
 import matplotlib.pyplot as plt
-from matplotlib import ticker
+from matplotlib import cm, ticker
 import numpy
 import subprocess
 import sys
@@ -43,6 +43,8 @@ def plot(args):
     try:
         # periodic simulation box length
         box = H5.parameters.mdsim._v_attrs.box_length
+        # positional coordinates dimension
+        dim = H5.parameters.mdsim._v_attrs.dimension
 
         major_formatter = ticker.FormatStrFormatter('%.3g')
         if 'cell_length' in H5.parameters.mdsim._v_attrs:
@@ -82,8 +84,11 @@ def plot(args):
             ax.grid(grid)
             # scale particle diameter from data units to points
             d = diameter * axscale / figscale
-            # plot particles in simulation box
-            plot = lambda x, y: ax.plot(x, y, 'o', markersize=d, markerfacecolor='b', markeredgecolor='b', alpha=0.5)
+            if dim == 3:
+                plot = lambda x, y: ax.scatter(x, y, s=(d * d), c=(r[:, 2] / box), cmap=cm.hsv, edgecolors='none', alpha=0.75)
+            else:
+                plot = lambda x, y: ax.plot(x, y, 'o', markersize=d, markerfacecolor='b', markeredgecolor='b', alpha=0.5)
+            # plot projections of particles in simulation box
             plot(r[:, 0], r[:, 1])
             # plot periodic particle images in neighbour boxes
             plot(r[:, 0], r[:, 1] + box)
