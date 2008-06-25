@@ -147,7 +147,7 @@ def color_wheel(x):
 
 def add_parser(subparsers):
     parser = subparsers.add_parser(command, help='trajectory projections on a 2-dimensional plane')
-    parser.add_argument('input', help='HDF5 data file')
+    parser.add_argument('input', metavar='INPUT', help='HDF5 trajectory file')
     parser.add_argument('--start', type=int, help='phase space sample offset')
     parser.add_argument('--count', type=int, help='phase space sample count')
     parser.add_argument('--stride', type=int, help='phase space sample stride')
