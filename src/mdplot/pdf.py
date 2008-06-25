@@ -19,7 +19,6 @@
 #
 
 import os, os.path
-import matplotlib.pyplot as plt
 import numpy
 from scipy.special import gamma
 import sys
@@ -34,6 +33,8 @@ Computer Simulation of Liquids, 1989,
 Oxford University Press, pp. 55, 183-184
 """
 def plot(args):
+    from matplotlib import pyplot as plt
+
     try:
         f = tables.openFile(args.input, mode='r')
     except IOError:
@@ -92,7 +93,11 @@ def plot(args):
     plt.axis([0, cutoff, 0, max(g)])
     plt.xlabel(r'particle distance $|\mathbf{r}_{ij}| / \sigma$')
     plt.ylabel(r'pair distribution function $g(|\mathbf{r}_{ij}| / \sigma)$')
-    plt.savefig(args.output)
+
+    if args.output is None:
+        plt.show()
+    else:
+        plt.savefig(args.output, dpi=args.dpi)
 
 
 def add_parser(subparsers):

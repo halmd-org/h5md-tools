@@ -19,7 +19,6 @@
 #
 
 import os, os.path
-import matplotlib.pyplot as plt
 import numpy
 import sys
 import tables
@@ -29,6 +28,8 @@ import tables
 Plot computation time versus system size
 """
 def plot(args):
+    from matplotlib import pyplot as plt
+
     name, variant = None, None
     data = {}
     for fn in args.input:
@@ -95,7 +96,10 @@ def plot(args):
         plt.xlabel(r'number of particles')
         plt.ylabel(r'computation time / s')
 
-    plt.savefig(args.output)
+    if args.output is None:
+        plt.show()
+    else:
+        plt.savefig(args.output, dpi=args.dpi)
 
 
 def add_parser(subparsers):

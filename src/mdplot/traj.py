@@ -20,7 +20,6 @@
 
 import os, os.path
 import glob
-import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy
 import subprocess
@@ -32,6 +31,8 @@ import tables
 Plot trajectory projections on a 2-dimensional plane
 """
 def plot(args):
+    from matplotlib import pyplot as plt
+
     try:
         f = tables.openFile(args.input, mode='r')
     except IOError:
@@ -62,7 +63,14 @@ def plot(args):
             # repulsive part of Lennard-Jones potential
             diameter = numpy.power(2, 1./6.)
 
-        fn, ext = os.path.splitext(args.output)
+        if args.output is None:
+            # use input basename as default output basename
+            fn, ext = os.path.splitext(args.input)
+            mfn = '%s.ogg' % fn
+        else:
+            fn, ext = os.path.splitext(args.output)
+            mfn = args.output
+
         # remove stray plot files
         for g in glob.glob('%s_*.png' % fn):
             os.unlink(g)
@@ -105,7 +113,7 @@ def plot(args):
             # print simulation time
             ax.text(0.85, 0.05, r'$t^* = %.2g$' % t, transform=ax.transAxes)
 
-            plt.savefig('%s_%06d.png' % (fn, i), dpi=300)
+            plt.savefig('%s_%06d.png' % (fn, i), dpi=args.dpi)
             plt.clf()
 
             # erase previously printed frame number characters
@@ -123,7 +131,7 @@ def plot(args):
     sys.stdout.flush()
 
     # render movie with ffmpeg2theora
-    ffmpeg = subprocess.Popen(['ffmpeg2theora', '%s_%%06d.png' % fn, '-x', '960', '-y', '960', '-S', '0', '-o', args.output, '--nosound'], close_fds=True)
+    ffmpeg = subprocess.Popen(['ffmpeg2theora', '%s_%%06d.png' % fn, '-x', '960', '-y', '960', '-S', '0', '-o', mfn, '--nosound'], close_fds=True)
     ret = ffmpeg.wait()
     if ret:
         raise SystemExit('mencoder exited with error code %d' % ret)

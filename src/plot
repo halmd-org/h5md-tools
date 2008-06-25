@@ -20,12 +20,8 @@
 #
 
 import argparse
-import tables
-import matplotlib
-# choose backend which does not require an X server
-matplotlib.use('Agg')
-
 from matplotlib import rc
+import matplotlib
 from mdplot import *
 
 def main():
@@ -37,6 +33,12 @@ def main():
     rc('text', usetex=True)
     if args.a4:
         rc('figure', figsize=[11.7, 8.3])
+
+    # set matplotlib backend
+    if args.output is None:
+        matplotlib.use('GTKAgg')
+    else:
+        matplotlib.use('Agg')
 
     # execute plot command
     try:
@@ -52,8 +54,10 @@ plots = (corr, en, perf, pdf, traj)
 
 def parse_args():
     parser = argparse.ArgumentParser(prog='mdplot')
-    parser.add_argument('--output', required=True, help='output filename')
+    parser.add_argument('--output', help='output filename')
     parser.add_argument('--a4', action="store_true", help='DIN A4 format')
+    parser.add_argument('--dpi', type=float, help='resolution in dots per inch')
+    parser.set_defaults(dpi=300)
 
     subparsers = parser.add_subparsers(dest='command', help='available plot modules')
     for plot in plots:

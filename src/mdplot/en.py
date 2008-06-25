@@ -19,7 +19,6 @@
 #
 
 import os, os.path
-import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy
 import sys
@@ -30,6 +29,8 @@ import tables
 Plot mean total energy per particle
 """
 def plot(args):
+    from matplotlib import pyplot as plt
+
     try:
         f = tables.openFile(args.input, mode='r')
     except IOError:
@@ -92,7 +93,11 @@ def plot(args):
     ax.yaxis.set_major_formatter(major_formatter)
     plt.xlabel(r'$t^*$')
     plt.ylabel(ylabel[args.type])
-    plt.savefig(args.output)
+
+    if args.output is None:
+        plt.show()
+    else:
+        plt.savefig(args.output, dpi=args.dpi)
 
 
 def add_parser(subparsers):
