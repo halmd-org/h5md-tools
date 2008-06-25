@@ -51,13 +51,8 @@ def plot(args):
 
     if args.xaxis:
         # limit data points to given x-axis range
-        x0 = max(x.min(), args.xaxis[0])
-        x1 = min(x.max(), args.xaxis[1])
-        i = numpy.where((x >= x0) & (x <= x1))
+        i = numpy.where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
         x, y, yerr = x[i], y[i], yerr[i]
-    else:
-        x0 = x.min()
-        x1 = x.max()
 
     if not len(x):
         raise SystemExit('empty plot range')

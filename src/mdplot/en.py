@@ -58,14 +58,8 @@ def plot(args):
 
     if args.xaxis:
         # limit data points to given x-axis range
-        x0 = max(x.min(), args.xaxis[0])
-        x1 = min(x.max(), args.xaxis[1])
-        i = numpy.where((x >= x0) & (x <= x1))
-        x = x[i]
-        y = y[i]
-    else:
-        x0 = x.min()
-        x1 = x.max()
+        i = numpy.where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
+        x = x[i], y = y[i]
 
     if not len(x):
         raise SystemExit('empty plot range')
@@ -89,10 +83,10 @@ def plot(args):
 
     ax = plt.axes()
     m, s = numpy.mean(y), numpy.std(y)
-    ax.fill([x0, x0, x1, x1], [m - s, m + s, m + s, m - s], 'm', alpha=0.1)
+    ax.axhspan(m - s, m + s, facecolor='m', edgecolor='m', alpha=0.1)
     ax.plot(x, y, color='m')
-    ax.plot([x0, x1], [m] * 2, '--', color='m', alpha=0.5)
-    ax.text(x1 + (x1 - x0) / 100, m, mlabel[args.type], verticalalignment='center', horizontalalignment='left')
+    ax.axhline(m, linestyle='--', color='m', alpha=0.5)
+    ax.text(1.01 * x.max() - 0.01 * x.min(), m, mlabel[args.type], verticalalignment='center', horizontalalignment='left')
     major_formatter = ticker.FormatStrFormatter('%g')
     ax.xaxis.set_major_formatter(major_formatter)
     ax.yaxis.set_major_formatter(major_formatter)
