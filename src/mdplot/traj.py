@@ -151,7 +151,6 @@ def add_parser(subparsers):
     parser.add_argument('--start', type=int, help='phase space sample offset')
     parser.add_argument('--count', type=int, help='phase space sample count')
     parser.add_argument('--stride', type=int, help='phase space sample stride')
-    parser.add_argument('--output', required=True, help='output filename')
     parser.set_defaults(start=0, count=0, stride=1)
 
 command = 'traj'

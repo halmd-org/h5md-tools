@@ -101,7 +101,6 @@ def add_parser(subparsers):
     parser.add_argument('--sample', type=int, help='phase space sample number')
     parser.add_argument('--bins', type=int, help='number of histogram bins')
     parser.add_argument('--cutoff', type=float, help='truncate function at given distance')
-    parser.add_argument('--output', required=True, help='output filename')
     parser.set_defaults(sample=-1, bins=1000)
 
 command = 'pdf'

@@ -26,33 +26,42 @@ import matplotlib
 matplotlib.use('Agg')
 
 from matplotlib import rc
-from mdplot import en, perf, pdf, traj
+from mdplot import *
 
+def main():
+    # parse command line arguments
+    args = parse_args()
 
-# parse command line arguments
-parser = argparse.ArgumentParser(prog='mdplot')
-subparsers = parser.add_subparsers(dest='command', help='available plot modules')
-en.add_parser(subparsers)
-perf.add_parser(subparsers)
-pdf.add_parser(subparsers)
-traj.add_parser(subparsers)
-args = parser.parse_args()
+    # set matplotlib defaults
+    rc('font', family='serif', serif=['Computer Modern Roman'])
+    rc('text', usetex=True)
+    if args.a4:
+        rc('figure', figsize=[11.7, 8.3])
 
-# set matplotlib defaults
-rc('font', family='serif', serif=['Computer Modern Roman'])
-rc('text', usetex=True)
-
-try:
     # execute plot command
-    if args.command == en.command:
-        en.plot(args)
-    elif args.command == perf.command:
-        perf.plot(args)
-    elif args.command == pdf.command:
-        pdf.plot(args)
-    elif args.command == traj.command:
-        traj.plot(args)
+    try:
+        for plot in plots:
+            if args.command == plot.command:
+                plot.plot(args)
 
-except SystemExit, status:
-    exit('ERROR: %s' % status)
+    except SystemExit, status:
+        exit('ERROR: %s' % status)
+
+
+plots = (corr, en, perf, pdf, traj)
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog='mdplot')
+    parser.add_argument('--output', required=True, help='output filename')
+    parser.add_argument('--a4', action="store_true", help='DIN A4 format')
+
+    subparsers = parser.add_subparsers(dest='command', help='available plot modules')
+    for plot in plots:
+        plot.add_parser(subparsers)
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    main()
 

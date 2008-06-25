@@ -67,6 +67,9 @@ def plot(args):
         x0 = x.min()
         x1 = x.max()
 
+    if not len(x):
+        raise SystemExit('empty plot range')
+
     ylabel = {
         'ETOT':  r'$\langle E\rangle / \epsilon$',
         'EPOT':  r'$\langle U\rangle / \epsilon$',
@@ -84,7 +87,6 @@ def plot(args):
         'VCM':   r'$\langle\vert\langle \textbf{v}^*\rangle\vert\rangle_{t^*}$',
     }
 
-    plt.figure(1, [11.7, 8.3])
     ax = plt.axes()
     m, s = numpy.mean(y), numpy.std(y)
     ax.fill([x0, x0, x1, x1], [m - s, m + s, m + s, m - s], 'm', alpha=0.1)
@@ -104,7 +106,6 @@ def add_parser(subparsers):
     parser.add_argument('input', metavar='INPUT', help='HDF5 energy file')
     parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM'], help='thermal equilibrium property')
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
-    parser.add_argument('--output', required=True, help='output filename')
 
 command = 'en'
 
