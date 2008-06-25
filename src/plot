@@ -26,12 +26,13 @@ import matplotlib
 matplotlib.use('Agg')
 
 from matplotlib import rc
-from mdplot import perf, pdf, traj
+from mdplot import en, perf, pdf, traj
 
 
 # parse command line arguments
 parser = argparse.ArgumentParser(prog='mdplot')
 subparsers = parser.add_subparsers(dest='command', help='available plot modules')
+en.add_parser(subparsers)
 perf.add_parser(subparsers)
 pdf.add_parser(subparsers)
 traj.add_parser(subparsers)
@@ -43,7 +44,9 @@ rc('text', usetex=True)
 
 try:
     # execute plot command
-    if args.command == perf.command:
+    if args.command == en.command:
+        en.plot(args)
+    elif args.command == perf.command:
         perf.plot(args)
     elif args.command == pdf.command:
         pdf.plot(args)
