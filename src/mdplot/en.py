@@ -101,10 +101,8 @@ def plot(args):
 
 
 def add_parser(subparsers):
-    parser = subparsers.add_parser(command, help='thermal equilibrium properties')
+    parser = subparsers.add_parser('en', help='thermal equilibrium properties')
     parser.add_argument('input', metavar='INPUT', help='HDF5 energy file')
     parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM'], help='thermal equilibrium property')
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
-
-command = 'en'
 

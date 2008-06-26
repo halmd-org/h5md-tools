@@ -103,9 +103,7 @@ def plot(args):
 
 
 def add_parser(subparsers):
-    parser = subparsers.add_parser(command, help='computation time versus system size')
+    parser = subparsers.add_parser('perf', help='computation time versus system size')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 performance files')
     parser.add_argument('--loglog', action='store_true', help='plot both axes with logarithmic scale')
-
-command = 'perf'
 

@@ -81,10 +81,8 @@ def plot(args):
 
 
 def add_parser(subparsers):
-    parser = subparsers.add_parser(command, help='correlation functions')
+    parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', help='HDF5 correlations file')
     parser.add_argument('--type', required=True, choices=['MSD', 'MQD', 'VAC'], help='correlation function')
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
-
-command = 'corr'
 

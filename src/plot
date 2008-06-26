@@ -23,6 +23,8 @@ import argparse
 from matplotlib import rc
 import matplotlib
 from mdplot import *
+import mdplot
+import sys
 
 def main():
     # parse command line arguments
@@ -42,15 +44,13 @@ def main():
 
     # execute plot command
     try:
-        for plot in plots:
-            if args.command == plot.command:
-                plot.plot(args)
+        plots[args.command].plot(args)
 
     except SystemExit, status:
         exit('ERROR: %s' % status)
 
 
-plots = (corr, en, perf, pdf, traj)
+plots = dict([(m, sys.modules['mdplot.%s' % m]) for m in mdplot.__all__])
 
 def parse_args():
     parser = argparse.ArgumentParser(prog='mdplot')
@@ -60,7 +60,7 @@ def parse_args():
     parser.set_defaults(dpi=300)
 
     subparsers = parser.add_subparsers(dest='command', help='available plot modules')
-    for plot in plots:
+    for plot in plots.itervalues():
         plot.add_parser(subparsers)
 
     return parser.parse_args()

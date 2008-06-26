@@ -101,12 +101,10 @@ def plot(args):
 
 
 def add_parser(subparsers):
-    parser = subparsers.add_parser(command, help='pair distribution function')
+    parser = subparsers.add_parser('pdf', help='pair distribution function')
     parser.add_argument('input', metavar='INPUT', help='HDF5 trajectory file')
     parser.add_argument('--sample', type=int, help='phase space sample number')
     parser.add_argument('--bins', type=int, help='number of histogram bins')
     parser.add_argument('--cutoff', type=float, help='truncate function at given distance')
     parser.set_defaults(sample=-1, bins=1000)
-
-command = 'pdf'
 
