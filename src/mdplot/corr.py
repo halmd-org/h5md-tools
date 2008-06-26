@@ -59,9 +59,9 @@ def plot(args):
         raise SystemExit('empty plot range')
 
     ylabel = {
-        'MSD': r'$\langle(r(t+\delta t)-r(t))^2\rangle$',
-        'MQD': r'$\langle(r(t+\delta t)-r(t))^4\rangle$',
-        'VAC': r'$\langle v(t+\delta t)v(t)\rangle$',
+        'MSD': r'$\langle(r(t+\tau)-r(t))^2\rangle$',
+        'MQD': r'$\langle(r(t+\tau)-r(t))^4\rangle$',
+        'VAC': r'$\langle v(t+\tau)v(t)\rangle$',
     }
 
     ax = plt.axes()
@@ -71,7 +71,7 @@ def plot(args):
         ax.set_yscale('log')
 
     plt.axis('tight')
-    plt.xlabel(r'$\delta t$')
+    plt.xlabel(r'$\tau$')
     plt.ylabel(ylabel[args.type])
 
     if args.output is None:
