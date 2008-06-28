@@ -38,12 +38,12 @@ def plot(args):
 
     H5 = f.root
     try:
-        # number of k-values
-        nk = H5.parameters.autocorrelation._v_attrs.k_values
+        # number of q-values
+        nq = H5.parameters.autocorrelation._v_attrs.nq
         # merge block levels
-        data = numpy.reshape(H5.ISF[:, :, 1:, :], (nk, -1, 4))
-        # F(k, 0) at lowest block level
-        norm = H5.ISF[:, 0, 0, 2]
+        data = numpy.reshape(H5._v_children[args.type][:, :, 1:, :], (nq, -1, 4))
+        # F(q, 0) at lowest block level
+        norm = H5._v_children[args.type][:, 0, 0, 2]
 
     except tables.exceptions.NoSuchNodeError:
         raise SystemExit('missing simulation data in file: %s' % args.input)
@@ -55,13 +55,13 @@ def plot(args):
     ax.set_color_cycle(['m', 'b', 'c', 'g', 'r'])
 
     for (d, n) in zip(data, norm):
-        k = d[0, 0]
+        q = d[0, 0]
         # time-order correlation function samples
         i = d[:, 1].argsort()
         x, y, yerr = d[i, 1], d[i, 2], d[i, 3]
 
         if args.normalize:
-            # normalize with F(k, 0)
+            # normalize with F(q, 0)
             y = y / n
             yerr = yerr / n
 
@@ -73,14 +73,18 @@ def plot(args):
         if not len(x):
             raise SystemExit('empty plot range')
 
-        ax.errorbar(x, y, yerr=yerr, label=r'$k = %.2f$' % k)
+        ax.errorbar(x, y, yerr=yerr, label=r'$q = %.2f$' % q)
 
     ax.set_xscale('log')
     ax.legend()
 
+    ylabel = {
+        'ISF': r'$F(q, \tau)$',
+        'SISF': r'$F_s(q, \tau)$',
+    }
     plt.axis('tight')
     plt.xlabel(r'$\tau$')
-    plt.ylabel(r'$F(k, \tau)$')
+    plt.ylabel(ylabel[args.type])
 
     if args.output is None:
         plt.show()
@@ -91,6 +95,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('isf', help='intermediate scattering function')
     parser.add_argument('input', metavar='INPUT', help='HDF5 correlations file')
+    parser.add_argument('--type', required=True, choices=['ISF', 'SISF'], help='correlation function')
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
 
