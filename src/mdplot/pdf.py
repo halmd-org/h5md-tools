@@ -46,9 +46,9 @@ def plot(args):
     try:
         try:
             # particle positions of phase space sample
-            r = H5.trajectory.positions[args.sample]
+            r = H5.trajectory.r[args.sample]
             # simulation time
-            time = H5.trajectory.time[args.sample]
+            time = H5.trajectory.t[args.sample]
         except IndexError:
             raise SystemExit('out-of-bounds phase space sample number')
 
