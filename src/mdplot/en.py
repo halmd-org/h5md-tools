@@ -60,7 +60,7 @@ def plot(args):
     if args.xaxis:
         # limit data points to given x-axis range
         i = numpy.where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
-        x = x[i], y = y[i]
+        x, y = x[i], y[i]
 
     if not len(x):
         raise SystemExit('empty plot range')
