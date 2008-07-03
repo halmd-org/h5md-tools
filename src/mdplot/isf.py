@@ -39,9 +39,9 @@ def plot(args):
     H5 = f.root
     try:
         # number of q-values
-        nq = H5.parameters.autocorrelation._v_attrs.nq
+        q_values = H5.param.correlation._v_attrs.q_values
         # merge block levels
-        data = numpy.reshape(H5._v_children[args.type][:, :, 1:, :], (nq, -1, 4))
+        data = numpy.reshape(H5._v_children[args.type][:, :, 1:, :], (q_values, -1, 4))
         # F(q, 0) at lowest block level
         norm = H5._v_children[args.type][:, 0, 0, 2]
 

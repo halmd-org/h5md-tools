@@ -43,22 +43,22 @@ def plot(args):
 
     try:
         # periodic simulation box length
-        box = H5.parameters.mdsim._v_attrs.box_length
+        box = H5.param.mdsim._v_attrs.box_length
         # positional coordinates dimension
-        dim = H5.parameters.mdsim._v_attrs.dimension
+        dim = H5.param.mdsim._v_attrs.dimension
 
         major_formatter = ticker.FormatStrFormatter('%.3g')
-        if 'cell_length' in H5.parameters.mdsim._v_attrs:
+        if 'cell_length' in H5.param.mdsim._v_attrs:
             # set tick interval to cell edge length
-            major_locator = ticker.MultipleLocator(H5.parameters.mdsim._v_attrs.cell_length)
+            major_locator = ticker.MultipleLocator(H5.param.mdsim._v_attrs.cell_length)
             grid = True
         else:
             major_locator = ticker.MultipleLocator(box / 10)
             grid = False
 
-        if 'pair_separation' in H5.parameters.mdsim._v_attrs:
+        if 'pair_separation' in H5.param.mdsim._v_attrs:
             # hardsphere particle diameter
-            diameter = H5.parameters.mdsim._v_attrs.pair_separation
+            diameter = H5.param.mdsim._v_attrs.pair_separation
         else:
             # repulsive part of Lennard-Jones potential
             diameter = numpy.power(2, 1./6.)

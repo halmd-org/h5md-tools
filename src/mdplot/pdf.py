@@ -53,13 +53,13 @@ def plot(args):
             raise SystemExit('out-of-bounds phase space sample number')
 
         # periodic simulation box length
-        box = H5.parameters.mdsim._v_attrs.box_length
+        box = H5.param.mdsim._v_attrs.box_length
         # number of particles
-        N = H5.parameters.mdsim._v_attrs.particles
+        N = H5.param.mdsim._v_attrs.particles
         # positional coordinates dimension
-        dim = H5.parameters.mdsim._v_attrs.dimension
+        dim = H5.param.mdsim._v_attrs.dimension
         # particle density
-        density = H5.parameters.mdsim._v_attrs.density
+        density = H5.param.mdsim._v_attrs.density
 
         cutoff = args.cutoff or box / 2
         H = numpy.zeros(args.bins)

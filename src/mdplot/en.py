@@ -42,7 +42,7 @@ def plot(args):
         x = data[:, 0]
         if args.type == 'VCM':
             # positional coordinates dimension
-            dim = H5.parameters.mdsim._v_attrs.dimension
+            dim = H5.param.mdsim._v_attrs.dimension
             # calculate center of velocity magnitude
             if dim == 3:
                 y = numpy.sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2] + data[:, 3] * data[:, 3])
