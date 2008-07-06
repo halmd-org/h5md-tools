@@ -83,6 +83,9 @@ def plot(args):
 
         sys.stdout.write('plot: %6sf' % '')
         for (i, (r, t)) in enumerate(zip(H5.trajectory.r[s], H5.trajectory.t[s])):
+            # enforce periodic boundary conditions
+            r[:] = r[:] - numpy.floor(r[:] / box) * box
+
             ax = plt.axes((0.06, 0.06, 0.88, 0.88))
             axscale = ax.get_window_extent().width / box
             ax.xaxis.set_major_locator(major_locator)
