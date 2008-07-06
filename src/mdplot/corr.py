@@ -38,8 +38,9 @@ def plot(args):
 
     H5 = f.root
     try:
-        # merge block levels
-        data = numpy.reshape(H5._v_children[args.type], (-1, 3))
+        # merge block levels, discarding time zero
+        data = H5._v_children[args.type][:, 1:, :]
+        data.shape = -1, data.shape[-1]
         # time-order correlation function samples
         ord = data[:, 0].argsort()
         x, y, yerr = data[ord, 0], data[ord, 1], data[ord, 2]
