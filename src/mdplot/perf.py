@@ -53,12 +53,10 @@ def plot(args):
             elif variant != H5.param.program._v_attrs.variant:
                 raise SystemExit('conflicting program variant in file: %s' % fn)
 
+            # particle density
             density = H5.param.mdsim._v_attrs.density
-
-            if '+CUDA' in variant:
-                time = H5.times.gpu.mdstep._v_attrs.mean
-            else:
-                time = H5.times.host.mdstep._v_attrs.mean
+            # mean MD simulation step time in equilibration phase
+            time = H5.times.mdstep[0][0]
 
             if not density in data:
                 data[density] = {}
