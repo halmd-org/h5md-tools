@@ -31,40 +31,6 @@ Plot mean total energy per particle
 def plot(args):
     from matplotlib import pyplot as plt
 
-    try:
-        f = tables.openFile(args.input, mode='r')
-    except IOError:
-        raise SystemExit('failed to open HDF5 file: %s' % args.input)
-
-    H5 = f.root
-    try:
-        data = H5._v_children[args.type]
-        x = data[:, 0]
-        if args.type == 'VCM':
-            # positional coordinates dimension
-            dim = H5.param.mdsim._v_attrs.dimension
-            # calculate center of velocity magnitude
-            if dim == 3:
-                y = numpy.sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2] + data[:, 3] * data[:, 3])
-            else:
-                y = numpy.sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
-        else:
-            y = data[:, 1]
-
-    except tables.exceptions.NoSuchNodeError:
-        raise SystemExit('missing simulation data in file: %s' % args.input)
-
-    finally:
-        f.close()
-
-    if args.xaxis:
-        # limit data points to given x-axis range
-        i = numpy.where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
-        x, y = x[i], y[i]
-
-    if not len(x):
-        raise SystemExit('empty plot range')
-
     ylabel = {
         'ETOT':  r'$\langle E\rangle / \epsilon$',
         'EPOT':  r'$\langle U\rangle / \epsilon$',
@@ -83,11 +49,57 @@ def plot(args):
     }
 
     ax = plt.axes()
-    m, s = numpy.mean(y), numpy.std(y)
-    ax.axhspan(m - s, m + s, facecolor='m', edgecolor='m', alpha=0.1)
-    ax.plot(x, y, color='m')
-    ax.axhline(m, linestyle='--', color='m', alpha=0.5)
-    ax.text(1.01 * x.max() - 0.01 * x.min(), m, mlabel[args.type], verticalalignment='center', horizontalalignment='left')
+
+    ci = 0
+    for fn in args.input:
+        try:
+            f = tables.openFile(fn, mode='r')
+        except IOError:
+            raise SystemExit('failed to open HDF5 file: %s' % args.input)
+
+        H5 = f.root
+        try:
+            data = H5._v_children[args.type]
+            x = data[:, 0]
+            if args.type == 'VCM':
+                # positional coordinates dimension
+                dim = H5.param.mdsim._v_attrs.dimension
+                # calculate center of velocity magnitude
+                if dim == 3:
+                    y = numpy.sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2] + data[:, 3] * data[:, 3])
+                else:
+                    y = numpy.sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
+            else:
+                y = data[:, 1]
+
+        except tables.exceptions.NoSuchNodeError:
+            raise SystemExit('missing simulation data in file: %s' % args.input)
+
+        finally:
+            f.close()
+
+        if args.xaxis:
+            # limit data points to given x-axis range
+            i = numpy.where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
+            x, y = x[i], y[i]
+
+        if not len(x):
+            raise SystemExit('empty plot range')
+
+        # cycle plot color
+        c = args.colors[ci % len(args.colors)]
+        ci += 1
+
+        ax.plot(x, y, color=c)
+
+        if args.mean:
+            m, s = numpy.mean(y), numpy.std(y)
+            # plot standard deviation
+            ax.axhspan(m - s, m + s, facecolor=c, edgecolor=c, alpha=0.1)
+            # plot mean
+            ax.axhline(m, linestyle='--', color=c, alpha=0.5)
+            ax.text(1.01 * x.max() - 0.01 * x.min(), m, mlabel[args.type], verticalalignment='center', horizontalalignment='left')
+
     major_formatter = ticker.FormatStrFormatter('%g')
     ax.xaxis.set_major_formatter(major_formatter)
     ax.yaxis.set_major_formatter(major_formatter)
@@ -102,7 +114,8 @@ def plot(args):
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('en', help='thermal equilibrium properties')
-    parser.add_argument('input', metavar='INPUT', help='HDF5 energy file')
+    parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 energy file')
     parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM'], help='thermal equilibrium property')
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
+    parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
 
