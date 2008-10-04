@@ -28,7 +28,7 @@ import tables
 Plot computation time versus system size
 """
 def plot(args):
-    from matplotlib import pyplot as plt
+    from matplotlib import pyplot as plot
 
     name, variant = None, None
     data = {}
@@ -47,14 +47,9 @@ def plot(args):
                 name = H5.param.program._v_attrs.name
             elif name != H5.param.program._v_attrs.name:
                 raise SystemExit('conflicting program name in file: %s' % fn)
-            # program variant (e.g. +3D +CUDA +VVERLET +CELL)
-            if variant is None:
-                variant = H5.param.program._v_attrs.variant
-            elif variant != H5.param.program._v_attrs.variant:
-                raise SystemExit('conflicting program variant in file: %s' % fn)
 
             # particle density
-            density = H5.param.mdsim._v_attrs.density
+            density = numpy.float32(H5.param.mdsim._v_attrs.density)
             # mean MD simulation step time in equilibration phase
             time = H5.times.mdstep[0][0]
 
@@ -63,8 +58,12 @@ def plot(args):
             if not args.loglog:
                 # number of particles in thousands
                 N = H5.param.mdsim._v_attrs.particles / 1000
-                # computation time in milliseconds
-                data[density][N] = time * 1000
+                if args.speedup and N in data[density]:
+                    # relative performance speedup
+                    data[density][N] = data[density][N] / (time * 1000)
+                else:
+                    # computation time in milliseconds
+                    data[density][N] = time * 1000
             else:
                 # number of particles
                 N = H5.param.mdsim._v_attrs.particles
@@ -77,34 +76,45 @@ def plot(args):
         finally:
             f.close()
 
-    ax = plt.axes()
+    ax = plot.axes()
     ax.set_color_cycle(args.colors)
 
-    plot = args.loglog and plt.loglog or plt.plot
-    for (density, set) in sorted(data.iteritems()):
+    plotf = args.loglog and plot.loglog or plot.plot
+    for (density, set) in reversed(sorted(data.iteritems())):
         d = numpy.array(sorted(set.iteritems()))
-        plot(d[:, 0], d[:, 1], '+-', label=r'$\rho^* = %.2g$' % density)
+        plotf(d[:, 0], d[:, 1], '.-', label=r'$\rho^* = %.2g$' % density)
 
-    plt.axis('tight')
+    ax.axis('tight')
+    if args.xlim:
+        plot.setp(ax, xlim=args.xlim)
+    if args.ylim:
+        plot.setp(ax, ylim=args.ylim)
+
     if not args.loglog:
-        plt.xlabel(args.xlabel or r'number of particles / 1000')
-        plt.ylabel(args.ylabel or r'computation time / ms')
+        plot.setp(ax, xlabel=r'number of particles / 1000')
+        if args.speedup:
+            plot.setp(ax, ylabel=r'GPU speedup over CPU')
+        else:
+            plot.setp(ax, ylabel=r'mean MD step time / ms')
     else:
-        plt.xlabel(args.xlabel or r'number of particles')
-        plt.ylabel(args.ylabel or r'computation time / s')
+        plot.setp(ax, xlabel=r'number of particles')
+        plot.setp(ax, ylabel=r'mean MD step time / s')
 
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
         l.legendPatch.set_alpha(0.7)
 
     if args.output is None:
-        plt.show()
+        plot.show()
     else:
-        plt.savefig(args.output, dpi=args.dpi)
+        plot.savefig(args.output, dpi=args.dpi)
 
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('perf', help='computation time versus system size')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 performance files')
+    parser.add_argument('--speedup', action='store_true', help='compare two data sets')
     parser.add_argument('--loglog', action='store_true', help='plot both axes with logarithmic scale')
+    parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
+    parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
 
