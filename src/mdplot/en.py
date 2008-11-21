@@ -91,8 +91,12 @@ def plot(args):
             # limit data points to given x-axis range
             i = numpy.where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
             x, y = x[i], y[i]
+        if args.yaxis:
+            # limit data points to given y-axis range
+            i = numpy.where((y >= args.yaxis[0]) & (y <= args.yaxis[1]))
+            x, y = x[i], y[i]
 
-        if not len(x):
+        if not len(x) or not len(y):
             raise SystemExit('empty plot range')
 
         # cycle plot color
@@ -130,5 +134,6 @@ def add_parser(subparsers):
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 energy file')
     parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM'], help='thermal equilibrium property')
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
+    parser.add_argument('--yaxis', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
 
