@@ -20,70 +20,118 @@
 
 import os, os.path
 from matplotlib import ticker
-import numpy
+from numpy import *
 import sys
 import tables
+import mdplot.label
 
 
 """
 Plot correlation functions
 """
 def plot(args):
-    from matplotlib import pyplot as plt
+    from matplotlib import pyplot as plot
 
-    try:
-        f = tables.openFile(args.input, mode='r')
-    except IOError:
-        raise SystemExit('failed to open HDF5 file: %s' % args.input)
+    ax = plot.axes()
+    title = None
 
-    H5 = f.root
-    try:
-        # merge block levels, discarding time zero
-        data = H5._v_children[args.type][:, 1:, :]
-        data.shape = -1, data.shape[-1]
-        # time-order correlation function samples
-        ord = data[:, 0].argsort()
-        x, y, yerr = data[ord, 0], data[ord, 1], data[ord, 2]
+    # plot line for zero crossings
+    if not args.axes in ('ylog', 'loglog'):
+        ax.axhline(y=0, color='black')
 
-    except tables.exceptions.NoSuchNodeError:
-        raise SystemExit('missing simulation data in file: %s' % args.input)
+    ci = 0
+    for fn in args.input:
+        try:
+            f = tables.openFile(fn, mode='r')
+        except IOError:
+            raise SystemExit('failed to open HDF5 file: %s' % fn)
 
-    finally:
-        f.close()
+        H5 = f.root
+        try:
+            data = H5._v_children[args.type]
+            # merge block levels, discarding time zero
+            tcf = data[:, 1:, :]
+            tcf.shape = -1, tcf.shape[-1]
+            # prepend time zero from lowest block
+            tcf = concatenate((data[0, 0, :].reshape(1, tcf.shape[-1]), tcf))
+            # time-order correlation function samples
+            time_order = tcf[:, 0].argsort()
+            x, y, yerr = tcf[time_order, 0], tcf[time_order, 1], tcf[time_order, 2]
 
-    if args.xaxis:
-        # limit data points to given x-axis range
-        i = numpy.where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
-        x, y, yerr = x[i], y[i], yerr[i]
+            if args.label:
+                label = args.label % mdplot.label.attributes(H5.param)
+            else:
+                label = fn.replace('_', r'\_')
+            if args.title:
+                title = args.title % mdplot.label.attributes(H5.param)
 
-    if not len(x):
-        raise SystemExit('empty plot range')
+        except tables.exceptions.NoSuchNodeError:
+            raise SystemExit('missing simulation data in file: %s' % fn)
 
+        finally:
+            f.close()
+
+        if args.xaxis:
+            # limit data points to given x-axis range
+            i = where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
+            x, y, yerr = x[i], y[i], yerr[i]
+        if args.yaxis:
+            # limit data points to given y-axis range
+            i = where((y >= args.yaxis[0]) & (x <= args.yaxis[1]))
+            x, y, yerr = x[i], y[i], yerr[i]
+
+        if args.normalize:
+            y, yerr = (y / y[0]), (yerr / y[0])
+
+        if not len(x) or not len(y):
+            raise SystemExit('empty plot range')
+
+
+        # cycle plot color
+        c = args.colors[ci % len(args.colors)]
+        ci += 1
+        ax.errorbar(x, y, yerr=yerr, color=c, label=label)
+
+    # optionally plot with logarithmic scale(s)
+    if args.axes == 'xlog':
+        ax.set_xscale('log')
+    if args.axes == 'ylog':
+        ax.set_yscale('log')
+    if args.axes == 'loglog':
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+
+    if not title is None:
+        plot.title(title)
+
+    plot.axis('tight')
+    plot.xlabel(r'$\tau$')
     ylabel = {
         'MSD': r'$\langle(r(t+\tau)-r(t))^2\rangle$',
         'MQD': r'$\langle(r(t+\tau)-r(t))^4\rangle$',
         'VAC': r'$\langle v(t+\tau)v(t)\rangle$',
     }
-
-    ax = plt.axes()
-    ax.errorbar(x, y, yerr=yerr, color='m')
-    ax.set_xscale('log')
-    if args.type in ('MSD', 'MQD'):
-        ax.set_yscale('log')
-
-    plt.axis('tight')
-    plt.xlabel(r'$\tau$')
-    plt.ylabel(ylabel[args.type])
+    plot.ylabel(ylabel[args.type])
+    # optimal legend placement
+    loc = {
+        'MSD': 'lower right',
+        'MQD': 'lower right',
+        'VAC': 'upper right',
+    }
+    plot.legend(loc=loc[args.type], labelsep=0.01, pad=0.1, axespad=0.025)
 
     if args.output is None:
-        plt.show()
+        plot.show()
     else:
-        plt.savefig(args.output, dpi=args.dpi)
+        plot.savefig(args.output, dpi=args.dpi)
 
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
-    parser.add_argument('input', metavar='INPUT', help='HDF5 correlations file')
+    parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
     parser.add_argument('--type', required=True, choices=['MSD', 'MQD', 'VAC'], help='correlation function')
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
+    parser.add_argument('--yaxis', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
+    parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
+    parser.add_argument('--normalize', action='store_true', help='normalize function')
 
