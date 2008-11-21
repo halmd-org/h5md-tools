@@ -23,6 +23,7 @@ from matplotlib import ticker
 import numpy
 import sys
 import tables
+import mdplot.label
 
 
 """
@@ -49,6 +50,7 @@ def plot(args):
     }
 
     ax = plt.axes()
+    title = None
 
     ci = 0
     for fn in args.input:
@@ -72,6 +74,13 @@ def plot(args):
             else:
                 y = data[:, 1]
 
+            if args.label:
+                label = args.label % mdplot.label.attributes(H5.param)
+            else:
+                label = fn.replace('_', r'\_')
+            if args.title:
+                title = args.title % mdplot.label.attributes(H5.param)
+
         except tables.exceptions.NoSuchNodeError:
             raise SystemExit('missing simulation data in file: %s' % fn)
 
@@ -89,8 +98,7 @@ def plot(args):
         # cycle plot color
         c = args.colors[ci % len(args.colors)]
         ci += 1
-
-        ax.plot(x, y, color=c)
+        ax.plot(x, y, color=c, label=label)
 
         if args.mean:
             m, s = numpy.mean(y), numpy.std(y)
@@ -103,8 +111,13 @@ def plot(args):
     major_formatter = ticker.FormatStrFormatter('%g')
     ax.xaxis.set_major_formatter(major_formatter)
     ax.yaxis.set_major_formatter(major_formatter)
+
+    if not title is None:
+        plt.title(title)
     plt.xlabel(r'$t^*$')
     plt.ylabel(ylabel[args.type])
+    l = plt.legend(loc='best', labelsep=0.01, pad=0.1, axespad=0.025)
+    l.legendPatch.set_alpha(0.7)
 
     if args.output is None:
         plt.show()
