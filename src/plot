@@ -58,7 +58,7 @@ def parse_args():
     parser.add_argument('--a4', action="store_true", help='DIN A4 format')
     parser.add_argument('--dpi', type=float, help='resolution in dots per inch')
     parser.add_argument('--colors', nargs='+', help='plot colors')
-    parser.set_defaults(dpi=300, colors=['m', 'b', 'c', 'g', 'r'])
+    parser.set_defaults(dpi=300, colors=['magenta', 'blue', 'cyan', 'green', 'orange', 'red', 'black', 'grey', 'brown'])
 
     subparsers = parser.add_subparsers(dest='command', help='available plot modules')
     for plot in plots.itervalues():
