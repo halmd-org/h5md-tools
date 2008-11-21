@@ -55,7 +55,7 @@ def plot(args):
         try:
             f = tables.openFile(fn, mode='r')
         except IOError:
-            raise SystemExit('failed to open HDF5 file: %s' % args.input)
+            raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f.root
         try:
@@ -73,7 +73,7 @@ def plot(args):
                 y = data[:, 1]
 
         except tables.exceptions.NoSuchNodeError:
-            raise SystemExit('missing simulation data in file: %s' % args.input)
+            raise SystemExit('missing simulation data in file: %s' % fn)
 
         finally:
             f.close()
