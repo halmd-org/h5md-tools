@@ -48,6 +48,14 @@ def plot(args):
         'TEMP':  r'$\langle\langle T\rangle\rangle_{t^*}$',
         'VCM':   r'$\langle\vert\langle \textbf{v}^*\rangle\vert\rangle_{t^*}$',
     }
+    slabel = {
+        'ETOT':  r'$\sigma_{\langle E\rangle}$',
+        'EPOT':  r'$\sigma_{\langle U\rangle}$',
+        'EKIN':  r'$\sigma_{\langle T\rangle}$',
+        'PRESS': r'$\sigma_{\langle P\rangle}$',
+        'TEMP':  r'$\sigma_{\langle T\rangle}$',
+        'VCM':   r'$\sigma_{\vert\langle \textbf{v}^*\rangle\vert}$',
+    }
 
     ax = plt.axes()
     title = None
@@ -110,7 +118,15 @@ def plot(args):
             ax.axhspan(m - s, m + s, facecolor=c, edgecolor=c, alpha=0.1)
             # plot mean
             ax.axhline(m, linestyle='--', color=c, alpha=0.5)
-            ax.text(1.01 * x.max() - 0.01 * x.min(), m, mlabel[args.type], verticalalignment='center', horizontalalignment='left')
+            ax.text(1.01 * x.max() - 0.01 * x.min(), m, mlabel[args.type],
+                    verticalalignment='center', horizontalalignment='left')
+            # plot values
+            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%s} = %.3g' % (mlabel[args.type], m),
+                    transform = ax.transAxes, verticalalignment='center',
+                    horizontalalignment='left')
+            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%s} = %.3g' % (slabel[args.type], s),
+                    transform = ax.transAxes, verticalalignment='center',
+                    horizontalalignment='left')
 
     major_formatter = ticker.FormatStrFormatter('%g')
     ax.xaxis.set_major_formatter(major_formatter)
