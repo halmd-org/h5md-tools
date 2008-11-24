@@ -101,6 +101,9 @@ def plot(args):
         ax.set_xscale('log')
         ax.set_yscale('log')
 
+    l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
+    l.legendPatch.set_alpha(0.7)
+
     if not title is None:
         plot.title(title)
 
@@ -112,13 +115,6 @@ def plot(args):
         'VAC': r'$\langle v(t+\tau)v(t)\rangle$',
     }
     plot.ylabel(ylabel[args.type])
-    # optimal legend placement
-    loc = {
-        'MSD': 'lower right',
-        'MQD': 'lower right',
-        'VAC': 'upper right',
-    }
-    plot.legend(loc=loc[args.type], labelsep=0.01, pad=0.1, axespad=0.025)
 
     if args.output is None:
         plot.show()

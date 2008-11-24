@@ -115,13 +115,13 @@ def plot(args):
     major_formatter = ticker.FormatStrFormatter('%g')
     ax.xaxis.set_major_formatter(major_formatter)
     ax.yaxis.set_major_formatter(major_formatter)
+    l = ax.legend(loc='best', labelsep=0.01, pad=0.1, axespad=0.025)
+    l.legendPatch.set_alpha(0.7)
 
     if not title is None:
         plt.title(title)
     plt.xlabel(r'$t^*$')
     plt.ylabel(ylabel[args.type])
-    l = plt.legend(loc='best', labelsep=0.01, pad=0.1, axespad=0.025)
-    l.legendPatch.set_alpha(0.7)
 
     if args.output is None:
         plt.show()

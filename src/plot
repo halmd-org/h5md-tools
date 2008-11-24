@@ -59,8 +59,13 @@ def parse_args():
     parser.add_argument('--dpi', type=float, help='resolution in dots per inch')
     parser.add_argument('--colors', nargs='+', help='plot colors')
     parser.add_argument('--label', help='legend label format')
+    parser.add_argument('--legend', help='legend placement')
     parser.add_argument('--title', help='plot title format')
-    parser.set_defaults(dpi=300, colors=['magenta', 'blue', 'cyan', 'green', 'orange', 'red', 'black', 'grey', 'brown'])
+    parser.set_defaults(
+            dpi=300,
+            colors=['magenta', 'blue', 'cyan', 'green', 'orange', 'red', 'black', 'grey', 'brown'],
+            legend='best',
+            )
 
     subparsers = parser.add_subparsers(dest='command', help='available plot modules')
     for plot in plots.itervalues():

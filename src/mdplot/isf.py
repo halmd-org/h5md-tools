@@ -77,7 +77,8 @@ def plot(args):
         ax.errorbar(x, y, yerr=yerr, label=r'$q = %.2f$' % q)
 
     ax.set_xscale('log')
-    ax.legend()
+    l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
+    l.legendPatch.set_alpha(0.7)
 
     ylabel = {
         'ISF': r'$F(q, \tau)$',

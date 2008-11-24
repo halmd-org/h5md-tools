@@ -93,6 +93,8 @@ def plot(args):
     plt.axis([0, cutoff, 0, max(g)])
     plt.xlabel(r'particle distance $|\mathbf{r}_{ij}| / \sigma$')
     plt.ylabel(r'pair distribution function $g(|\mathbf{r}_{ij}| / \sigma)$')
+    l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
+    l.legendPatch.set_alpha(0.7)
 
     if args.output is None:
         plt.show()

@@ -80,13 +80,15 @@ def plot(args):
     ax = plt.axes()
     ax.set_color_cycle(['m', 'b', 'c', 'g', 'r'])
 
+    l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
+    l.legendPatch.set_alpha(0.7)
+
     plot = args.loglog and plt.loglog or plt.plot
     for (density, set) in sorted(data.iteritems()):
         d = numpy.array(sorted(set.iteritems()))
         plot(d[:, 0], d[:, 1], '+-', label=r'$\rho^* = %.2g$' % density)
 
     plt.axis('tight')
-    plt.legend(loc='best', labelsep=0.01, pad=0.1, axespad=0.025)
     if not args.loglog:
         plt.xlabel(r'number of particles / 1000')
         plt.ylabel(r'computation time / ms')
