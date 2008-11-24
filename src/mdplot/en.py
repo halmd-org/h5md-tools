@@ -85,7 +85,7 @@ def plot(args):
             if args.label:
                 label = args.label % mdplot.label.attributes(H5.param)
             else:
-                label = fn.replace('_', r'\_')
+                label = r'{\small %s}' % fn.replace('_', r'\_')
             if args.title:
                 title = args.title % mdplot.label.attributes(H5.param)
 
