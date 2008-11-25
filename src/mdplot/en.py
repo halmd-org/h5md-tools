@@ -128,9 +128,10 @@ def plot(args):
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
 
-    major_formatter = ticker.FormatStrFormatter('%g')
-    ax.xaxis.set_major_formatter(major_formatter)
+    major_formatter = ticker.ScalarFormatter()
+    major_formatter.set_powerlimits((-3, 4))
     ax.yaxis.set_major_formatter(major_formatter)
+
     l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
     l.legendPatch.set_alpha(0.7)
 
