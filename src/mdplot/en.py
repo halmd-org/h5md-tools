@@ -20,7 +20,7 @@
 
 import os, os.path
 from matplotlib import ticker
-import numpy
+from numpy import *
 import sys
 import tables
 import mdplot.label
@@ -32,29 +32,47 @@ Plot mean total energy per particle
 def plot(args):
     from matplotlib import pyplot as plt
 
+    # thermal equilibrium property
+    tep = args.type
+
     ylabel = {
-        'ETOT':  r'$\langle E\rangle / \epsilon$',
-        'EPOT':  r'$\langle U\rangle / \epsilon$',
-        'EKIN':  r'$\langle T\rangle / \epsilon$',
-        'PRESS': r'$\langle P\rangle$',
-        'TEMP':  r'$\langle T\rangle$',
-        'VCM':   r'$\vert\langle \textbf{v}^*\rangle\vert$',
-    }
-    mlabel = {
-        'ETOT':  r'$\langle\langle E\rangle\rangle_{t^*}$',
-        'EPOT':  r'$\langle\langle U\rangle\rangle_{t^*}$',
-        'EKIN':  r'$\langle\langle T\rangle\rangle_{t^*}$',
-        'PRESS': r'$\langle\langle P\rangle\rangle_{t^*}$',
-        'TEMP':  r'$\langle\langle T\rangle\rangle_{t^*}$',
-        'VCM':   r'$\langle\vert\langle \textbf{v}^*\rangle\vert\rangle_{t^*}$',
-    }
-    slabel = {
-        'ETOT':  r'$\sigma_{\langle E\rangle}$',
-        'EPOT':  r'$\sigma_{\langle U\rangle}$',
-        'EKIN':  r'$\sigma_{\langle T\rangle}$',
-        'PRESS': r'$\sigma_{\langle P\rangle}$',
-        'TEMP':  r'$\sigma_{\langle T\rangle}$',
-        'VCM':   r'$\sigma_{\vert\langle \textbf{v}^*\rangle\vert}$',
+        # type: absolute, mean, standard deviation, unit
+        'ETOT': [
+            r'\langle E\rangle',
+            r'\langle\langle E\rangle\rangle_{t^*}',
+            r'\sigma_{\langle E\rangle}',
+            r'\epsilon',
+        ],
+        'EPOT': [
+            r'\langle U\rangle',
+            r'\langle\langle U\rangle\rangle_{t^*}',
+            r'\sigma_{\langle U\rangle}',
+            r'\epsilon',
+        ],
+        'EKIN': [
+            r'\langle T\rangle',
+            r'\langle\langle T\rangle\rangle_{t^*}',
+            r'\sigma_{\langle T\rangle}',
+            r'\epsilon',
+        ],
+        'PRESS': [
+            r'\langle P\rangle',
+            r'\langle\langle P\rangle\rangle_{t^*}',
+            r'\sigma_{\langle P\rangle}',
+            r'',
+        ],
+        'TEMP': [
+            r'\langle T\rangle',
+            r'\langle\langle T\rangle\rangle_{t^*}',
+            r'\sigma_{\langle T\rangle}',
+            r'',
+        ],
+        'VCM': [
+            r'\vert\langle \textbf{v}^*\rangle\vert',
+            r'\langle\vert\langle \textbf{v}^*\rangle\vert\rangle_{t^*}',
+            r'\sigma_{\vert\langle \textbf{v}^*\rangle\vert}',
+            r'',
+        ],
     }
 
     ax = plt.axes()
@@ -69,18 +87,20 @@ def plot(args):
 
         H5 = f.root
         try:
-            data = H5._v_children[args.type]
+            data = H5._v_children[tep]
             x = data[:, 0]
-            if args.type == 'VCM':
+            if tep == 'VCM':
                 # positional coordinates dimension
                 dim = H5.param.mdsim._v_attrs.dimension
                 # calculate center of velocity magnitude
                 if dim == 3:
-                    y = numpy.sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2] + data[:, 3] * data[:, 3])
+                    y = sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2] + data[:, 3] * data[:, 3])
                 else:
-                    y = numpy.sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
+                    y = sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
             else:
                 y = data[:, 1]
+            if args.rescale:
+                timestep = H5.param.mdsim._v_attrs.timestep
 
             if args.label:
                 label = args.label % mdplot.label.attributes(H5.param)
@@ -98,12 +118,19 @@ def plot(args):
 
         if args.xaxis:
             # limit data points to given x-axis range
-            i = numpy.where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
+            i = where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
             x, y = x[i], y[i]
         if args.yaxis:
             # limit data points to given y-axis range
-            i = numpy.where((y >= args.yaxis[0]) & (y <= args.yaxis[1]))
+            i = where((y >= args.yaxis[0]) & (y <= args.yaxis[1]))
             x, y = x[i], y[i]
+
+        if args.sub_mean:
+            # subtract mean value from data
+            y = y - mean(y);
+        if args.rescale:
+            # divide by squared timestep
+            y = y / pow(timestep, 2)
 
         if not len(x) or not len(y):
             raise SystemExit('empty plot range')
@@ -114,18 +141,18 @@ def plot(args):
         ax.plot(x, y, color=c, label=label)
 
         if args.mean:
-            m, s = numpy.mean(y), numpy.std(y)
+            m, s = mean(y), std(y)
             # plot standard deviation
             ax.axhspan(m - s, m + s, facecolor=c, edgecolor=c, alpha=0.1)
             # plot mean
             ax.axhline(m, linestyle='--', color=c, alpha=0.5)
-            ax.text(1.01 * x.max() - 0.01 * x.min(), m, mlabel[args.type],
+            ax.text(1.01 * x.max() - 0.01 * x.min(), m, r'$%s$' % ylabel[tep][1],
                     verticalalignment='center', horizontalalignment='left')
             # plot values
-            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%s} = %.3g' % (mlabel[args.type], m),
+            ax.text(0.75, 0.125, r'\parbox{1.2cm}{$%s$} = %.3g' % (ylabel[tep][1], m),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
-            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%s} = %.3g' % (slabel[args.type], s),
+            ax.text(0.75, 0.075, r'\parbox{1.2cm}{$%s$} = %.3g' % (ylabel[tep][2], s),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
 
@@ -139,7 +166,16 @@ def plot(args):
     if not title is None:
         plt.title(title)
     plt.xlabel(r'$t^*$')
-    plt.ylabel(ylabel[args.type])
+    if args.sub_mean:
+        if ylabel[tep][3]:
+            plt.ylabel(r'$(%s - %s) / %s$' % (ylabel[tep][0], ylabel[tep][1], ylabel[tep][3]))
+        else:
+            plt.ylabel(r'$%s - %s$' % (ylabel[tep][0], ylabel[tep][1]))
+    else:
+        if ylabel[tep][3]:
+            plt.ylabel(r'$%s / %s$' % (ylabel[tep][0], ylabel[tep][3]))
+        else:
+            plt.ylabel(r'$%s$' % (ylabel[tep],))
 
     if args.output is None:
         plt.show()
@@ -154,4 +190,6 @@ def add_parser(subparsers):
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--yaxis', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
+    parser.add_argument('--sub-mean', action='store_true', help='subtract mean values')
+    parser.add_argument('--rescale', action='store_true', help='divide by squared timestep')
 
