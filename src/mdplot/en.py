@@ -38,40 +38,40 @@ def plot(args):
     ylabel = {
         # type: absolute, mean, standard deviation, unit
         'ETOT': [
-            r'\langle E\rangle',
-            r'\langle\langle E\rangle\rangle_{t^*}',
-            r'\sigma_{\langle E\rangle}',
-            r'\epsilon',
+            r'$\langle E(t^*)\rangle / \epsilon$',
+            r'$\langle\langle E\rangle\rangle_{t^*}$',
+            r'$\sigma_{\langle E\rangle}$',
+            r'$\dfrac{\langle E(t^*)\rangle - \langle E(0)\rangle}{\delta t^2} / \epsilon$',
         ],
-        'EPOT': [
-            r'\langle U\rangle',
-            r'\langle\langle U\rangle\rangle_{t^*}',
-            r'\sigma_{\langle U\rangle}',
-            r'\epsilon',
+        '$EPOT': [
+            r'$\langle U(t^*)\rangle / \epsilon$',
+            r'$\langle\langle U\rangle\rangle_{t^*}$',
+            r'$\sigma_{\langle U\rangle}$',
+            r'$\dfrac{\langle U(t^*)\rangle - \langle U(0)\rangle}{\delta t^2} / \epsilon$',
         ],
-        'EKIN': [
-            r'\langle T\rangle',
-            r'\langle\langle T\rangle\rangle_{t^*}',
-            r'\sigma_{\langle T\rangle}',
-            r'\epsilon',
+        '$EKIN': [
+            r'$\langle T(t^*)\rangle / \epsilon$',
+            r'$\langle\langle T\rangle\rangle_{t^*}$',
+            r'$\sigma_{\langle T\rangle}$',
+            r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\delta t^2} / \epsilon$',
         ],
-        'PRESS': [
-            r'\langle P\rangle',
-            r'\langle\langle P\rangle\rangle_{t^*}',
-            r'\sigma_{\langle P\rangle}',
-            r'',
+        '$PRESS': [
+            r'$\langle P(t^*)\rangle$',
+            r'$\langle\langle P\rangle\rangle_{t^*}$',
+            r'$\sigma_{\langle P\rangle}$',
+            r'$\dfrac{\langle P(t^*)\rangle - \langle P(0)\rangle}{\delta t^2}$',
         ],
-        'TEMP': [
-            r'\langle T\rangle',
-            r'\langle\langle T\rangle\rangle_{t^*}',
-            r'\sigma_{\langle T\rangle}',
-            r'',
+        '$TEMP': [
+            r'$\langle T(t^*)\rangle$',
+            r'$\langle\langle T\rangle\rangle_{t^*}$',
+            r'$\sigma_{\langle T\rangle}$',
+            r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\delta t^2}$',
         ],
-        'VCM': [
-            r'\vert\langle \textbf{v}^*\rangle\vert',
-            r'\langle\vert\langle \textbf{v}^*\rangle\vert\rangle_{t^*}',
-            r'\sigma_{\vert\langle \textbf{v}^*\rangle\vert}',
-            r'',
+        '$VCM': [
+            r'$\vert\langle \textbf{v}^*(t^*)\rangle\vert$',
+            r'$\langle\vert\langle \textbf{v}^*\rangle\vert\rangle_{t^*}$',
+            r'$\sigma_{\vert\langle \textbf{v}^*\rangle\vert}$',
+            r'$\dfrac{\vert\langle \textbf{v}^*(t^*)\rangle\vert - \vert\langle \textbf{v}^*(0)\rangle\vert}{\delta t^2}$',
         ],
     }
 
@@ -115,6 +115,12 @@ def plot(args):
         finally:
             f.close()
 
+        if args.rescale:
+            # subtract zero value from data
+            y = y - y[0];
+            # divide by squared timestep
+            y = y / pow(timestep, 2)
+
         if args.xaxis:
             # limit data points to given x-axis range
             i = where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
@@ -123,12 +129,6 @@ def plot(args):
             # limit data points to given y-axis range
             i = where((y >= args.yaxis[0]) & (y <= args.yaxis[1]))
             x, y = x[i], y[i]
-
-        if args.rescale:
-            # subtract mean value from data
-            y = y - mean(y);
-            # divide by squared timestep
-            y = y / pow(timestep, 2)
 
         if not len(x) or not len(y):
             raise SystemExit('empty plot range')
@@ -144,13 +144,13 @@ def plot(args):
             ax.axhspan(m - s, m + s, facecolor=c, edgecolor=c, alpha=0.1)
             # plot mean
             ax.axhline(m, linestyle='--', color=c, alpha=0.5)
-            ax.text(1.01 * x.max() - 0.01 * x.min(), m, r'$%s$' % ylabel[tep][1],
+            ax.text(1.01 * x.max() - 0.01 * x.min(), m, r'%s' % ylabel[tep][1],
                     verticalalignment='center', horizontalalignment='left')
             # plot values
-            ax.text(0.75, 0.125, r'\parbox{1.2cm}{$%s$} = %.3g' % (ylabel[tep][1], m),
+            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[tep][1], m),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
-            ax.text(0.75, 0.075, r'\parbox{1.2cm}{$%s$} = %.3g' % (ylabel[tep][2], s),
+            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[tep][2], s),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
 
@@ -165,15 +165,9 @@ def plot(args):
         plt.title(title)
     plt.xlabel(r'$t^*$')
     if args.rescale:
-        if ylabel[tep][3]:
-            plt.ylabel(r'$\dfrac{(%s - %s)}{\delta t^2} / %s$' % (ylabel[tep][0], ylabel[tep][1], ylabel[tep][3]))
-        else:
-            plt.ylabel(r'$%s - %s$' % (ylabel[tep][0], ylabel[tep][1]))
+        plt.ylabel(ylabel[tep][3])
     else:
-        if ylabel[tep][3]:
-            plt.ylabel(r'$%s / %s$' % (ylabel[tep][0], ylabel[tep][3]))
-        else:
-            plt.ylabel(r'$%s$' % (ylabel[tep],))
+        plt.ylabel(ylabel[tep][0])
 
     if args.output is None:
         plt.show()
@@ -188,5 +182,5 @@ def add_parser(subparsers):
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--yaxis', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
-    parser.add_argument('--rescale', action='store_true', help='substract mean and divide by squared timestep')
+    parser.add_argument('--rescale', action='store_true', help='substract zero value and divide by squared timestep')
 
