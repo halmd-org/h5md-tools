@@ -33,6 +33,7 @@ def main():
     # set matplotlib defaults
     rc('font', family='serif', serif=['Computer Modern Roman'])
     rc('text', usetex=True)
+    rc('text.latex', preamble=r'\usepackage{amsmath}')
     if args.a4:
         rc('figure', figsize=[11.7, 8.3])
 

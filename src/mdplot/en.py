@@ -99,8 +99,7 @@ def plot(args):
                     y = sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
             else:
                 y = data[:, 1]
-            if args.rescale:
-                timestep = H5.param.mdsim._v_attrs.timestep
+            timestep = H5.param.mdsim._v_attrs.timestep
 
             if args.label:
                 label = args.label % mdplot.label.attributes(H5.param)
@@ -125,10 +124,9 @@ def plot(args):
             i = where((y >= args.yaxis[0]) & (y <= args.yaxis[1]))
             x, y = x[i], y[i]
 
-        if args.sub_mean:
+        if args.rescale:
             # subtract mean value from data
             y = y - mean(y);
-        if args.rescale:
             # divide by squared timestep
             y = y / pow(timestep, 2)
 
@@ -166,9 +164,9 @@ def plot(args):
     if not title is None:
         plt.title(title)
     plt.xlabel(r'$t^*$')
-    if args.sub_mean:
+    if args.rescale:
         if ylabel[tep][3]:
-            plt.ylabel(r'$(%s - %s) / %s$' % (ylabel[tep][0], ylabel[tep][1], ylabel[tep][3]))
+            plt.ylabel(r'$\dfrac{(%s - %s)}{\delta t^2} / %s$' % (ylabel[tep][0], ylabel[tep][1], ylabel[tep][3]))
         else:
             plt.ylabel(r'$%s - %s$' % (ylabel[tep][0], ylabel[tep][1]))
     else:
@@ -190,6 +188,5 @@ def add_parser(subparsers):
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--yaxis', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
-    parser.add_argument('--sub-mean', action='store_true', help='subtract mean values')
-    parser.add_argument('--rescale', action='store_true', help='divide by squared timestep')
+    parser.add_argument('--rescale', action='store_true', help='substract mean and divide by squared timestep')
 
