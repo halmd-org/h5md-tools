@@ -51,12 +51,15 @@ def plot(args):
             data = H5._v_children[args.type]
             # merge block levels, discarding time zero
             tcf = data[:, 1:, :]
-            tcf.shape = -1, tcf.shape[-1]
-            # prepend time zero from lowest block
-            tcf = concatenate((data[0, 0, :].reshape(1, tcf.shape[-1]), tcf))
-            # time-order correlation function samples
-            time_order = tcf[:, 0].argsort()
-            x, y, yerr = tcf[time_order, 0], tcf[time_order, 1], tcf[time_order, 2]
+            if args.unordered:
+                x, y, yerr = tcf[:, :, 0], tcf[:, :, 1], tcf[:, :, 2]
+            else:
+                tcf.shape = -1, tcf.shape[-1]
+                # prepend time zero from lowest block
+                tcf = concatenate((data[0, 0, :].reshape(1, tcf.shape[-1]), tcf))
+                # time-order correlation function samples
+                time_order = tcf[:, 0].argsort()
+                x, y, yerr = tcf[time_order, 0], tcf[time_order, 1], tcf[time_order, 2]
 
             if args.label:
                 label = args.label % mdplot.label.attributes(H5.param)
@@ -91,7 +94,14 @@ def plot(args):
         # cycle plot color
         c = args.colors[ci % len(args.colors)]
         ci += 1
-        ax.errorbar(x, y, yerr=yerr, color=c, label=label)
+        if args.unordered:
+            # plot start point of each block
+            ax.plot(x[:, 0], y[:, 0], '+', color=c, ms=10, alpha=0.5, label=label)
+            for (i, (bx, by, byerr)) in enumerate(zip(x, y, yerr)):
+                # plot single block
+                ax.plot(bx, by, marker=(',', '3')[i % 2], color=c, lw=0.1, ms=3)
+        else:
+            ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
 
     # optionally plot with logarithmic scale(s)
     if args.axes == 'xlog':
@@ -130,5 +140,6 @@ def add_parser(subparsers):
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--yaxis', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
+    parser.add_argument('--unordered', action='store_true', help='disable block time ordering')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
 
