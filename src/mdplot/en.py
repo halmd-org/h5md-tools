@@ -43,31 +43,31 @@ def plot(args):
             r'$\sigma_{\langle E\rangle}$',
             r'$\dfrac{\langle E(t^*)\rangle - \langle E(0)\rangle}{\delta t^2} / \epsilon$',
         ],
-        '$EPOT': [
+        'EPOT': [
             r'$\langle U(t^*)\rangle / \epsilon$',
             r'$\langle\langle U\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle U\rangle}$',
             r'$\dfrac{\langle U(t^*)\rangle - \langle U(0)\rangle}{\delta t^2} / \epsilon$',
         ],
-        '$EKIN': [
+        'EKIN': [
             r'$\langle T(t^*)\rangle / \epsilon$',
             r'$\langle\langle T\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle T\rangle}$',
             r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\delta t^2} / \epsilon$',
         ],
-        '$PRESS': [
+        'PRESS': [
             r'$\langle P(t^*)\rangle$',
             r'$\langle\langle P\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle P\rangle}$',
             r'$\dfrac{\langle P(t^*)\rangle - \langle P(0)\rangle}{\delta t^2}$',
         ],
-        '$TEMP': [
+        'TEMP': [
             r'$\langle T(t^*)\rangle$',
             r'$\langle\langle T\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle T\rangle}$',
             r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\delta t^2}$',
         ],
-        '$VCM': [
+        'VCM': [
             r'$\vert\langle \textbf{v}^*(t^*)\rangle\vert$',
             r'$\langle\vert\langle \textbf{v}^*\rangle\vert\rangle_{t^*}$',
             r'$\sigma_{\vert\langle \textbf{v}^*\rangle\vert}$',
