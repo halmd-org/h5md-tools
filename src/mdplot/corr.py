@@ -48,18 +48,33 @@ def plot(args):
 
         H5 = f.root
         try:
-            data = H5._v_children[args.type]
+            data = H5._v_children[args.type[-3:]]
             # merge block levels, discarding time zero
             tcf = data[:, 1:, :]
-            if args.unordered:
-                x, y, yerr = tcf[:, :, 0], tcf[:, :, 1], tcf[:, :, 2]
+
+            if args.type == 'DIFF2MSD':
+                # calculate VACF from 2nd discrete derivative of MSD
+                h = (tcf[:, 2:, 0] - tcf[:, :-2, 0]) / 2
+                x = (tcf[:, 2:, 0] + tcf[:, :-2, 0]) / 2
+                y = 0.5 * diff(tcf[:, :, 1], axis=1, n=2) / pow(h, 2)
+                if not args.unordered:
+                    x.shape = -1
+                    y.shape = -1
+                    # time-order correlation function samples
+                    time_order = x.argsort()
+                    x, y = x[time_order], y[time_order]
+
             else:
-                tcf.shape = -1, tcf.shape[-1]
-                # prepend time zero from lowest block
-                tcf = concatenate((data[0, 0, :].reshape(1, tcf.shape[-1]), tcf))
-                # time-order correlation function samples
-                time_order = tcf[:, 0].argsort()
-                x, y, yerr = tcf[time_order, 0], tcf[time_order, 1], tcf[time_order, 2]
+                if args.unordered:
+                    x, y, yerr = tcf[:, :, 0], tcf[:, :, 1], tcf[:, :, 2]
+                else:
+                    tcf.shape = -1, tcf.shape[-1]
+                    # prepend time zero from lowest block
+                    tcf = concatenate((data[0, 0, :].reshape(1, tcf.shape[-1]), tcf))
+                    # time-order correlation function samples
+                    time_order = tcf[:, 0].argsort()
+                    x, y, yerr = tcf[time_order, 0], tcf[time_order, 1], tcf[time_order, 2]
+
 
             if args.label:
                 label = args.label % mdplot.label.attributes(H5.param)
@@ -94,12 +109,17 @@ def plot(args):
         # cycle plot color
         c = args.colors[ci % len(args.colors)]
         ci += 1
+
         if args.unordered:
             # plot start point of each block
             ax.plot(x[:, 0], y[:, 0], '+', color=c, ms=10, alpha=0.5, label=label)
-            for (i, (bx, by, byerr)) in enumerate(zip(x, y, yerr)):
-                # plot single block
-                ax.plot(bx, by, marker=(',', '3')[i % 2], color=c, lw=0.1, ms=3)
+            # plot separate curve for each block
+            for (i, (xi, yi)) in enumerate(zip(x, y)):
+                ax.plot(xi, yi, marker=(',', '3')[i % 2], color=c, lw=0.2, ms=3)
+
+        elif args.type == 'DIFF2MSD':
+            ax.plot(x, y, color=c, label=label)
+
         else:
             ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
 
@@ -124,6 +144,7 @@ def plot(args):
         'MSD': r'$\langle(r(t+\tau)-r(t))^2\rangle$',
         'MQD': r'$\langle(r(t+\tau)-r(t))^4\rangle$',
         'VAC': r'$\langle v(t+\tau)v(t)\rangle$',
+        'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle(r(t+\tau)-r(t))^2\rangle$',
     }
     plot.ylabel(ylabel[args.type])
 
@@ -136,7 +157,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
-    parser.add_argument('--type', required=True, choices=['MSD', 'MQD', 'VAC'], help='correlation function')
+    parser.add_argument('--type', required=True, choices=['MSD', 'MQD', 'VAC', 'DIFF2MSD'], help='correlation function')
     parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--yaxis', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
