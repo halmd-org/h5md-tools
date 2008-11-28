@@ -80,7 +80,7 @@ def plot(args):
     ax = plt.axes()
     ax.set_color_cycle(['m', 'b', 'c', 'g', 'r'])
 
-    l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
+    l = ax.legend(loc=args.legend)
     l.legendPatch.set_alpha(0.7)
 
     plot = args.loglog and plt.loglog or plt.plot

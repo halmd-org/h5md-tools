@@ -149,7 +149,7 @@ def plot(args):
     major_formatter.set_powerlimits((-3, 4))
     ax.yaxis.set_major_formatter(major_formatter)
 
-    l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
+    l = ax.legend(loc=args.legend)
     l.legendPatch.set_alpha(0.7)
 
     plt.axis('tight')

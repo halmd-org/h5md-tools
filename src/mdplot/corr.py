@@ -142,7 +142,7 @@ def plot(args):
         ax.set_xscale('log')
         ax.set_yscale('log')
 
-    l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
+    l = ax.legend(loc=args.legend)
     l.legendPatch.set_alpha(0.7)
 
     if not title is None:
