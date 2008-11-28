@@ -87,6 +87,8 @@ def plot(args):
         H5 = f.root
         try:
             data = H5._v_children[tep]
+            if args.decimate:
+                data = data[::args.decimate, :]
             x = data[:, 0]
             if tep == 'VCM':
                 # positional coordinates dimension
@@ -178,4 +180,5 @@ def add_parser(subparsers):
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
     parser.add_argument('--rescale', action='store_true', help='substract zero value and divide by squared timestep')
+    parser.add_argument('--decimate', type=int, help='plot every nth data point')
 
