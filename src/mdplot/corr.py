@@ -102,6 +102,10 @@ def plot(args):
         if args.normalize:
             y, yerr = (y / y[0]), (yerr / y[0])
 
+        if args.axes in ('ylog', 'loglog'):
+            # use absolute y-values with logarithmic plot (for VACF)
+            y = abs(y)
+
         if not len(x) or not len(y):
             raise SystemExit('empty plot range')
 
