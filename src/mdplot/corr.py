@@ -66,12 +66,17 @@ def plot(args):
                     h = (tcf[:, 2:, 0] - tcf[:, :-2, 0]) / 2
                     x = (tcf[:, 2:, 0] + tcf[:, :-2, 0]) / 2
                     y = 0.5 * diff(tcf[:, :, 1], axis=1, n=2) / pow(h, 2)
+
                     if not args.unordered:
                         x.shape = -1
                         y.shape = -1
                         # time-order correlation function samples
                         time_order = x.argsort()
                         x, y = x[time_order], y[time_order]
+
+                    if args.normalize:
+                        y0 = H5._v_children['VAC'][0, 0, 1]
+                        y = y / y0
 
                 else:
                     if args.unordered:
@@ -84,6 +89,9 @@ def plot(args):
                         time_order = tcf[:, 0].argsort()
                         x, y, yerr = tcf[time_order, 0], tcf[time_order, 1], tcf[time_order, 2]
 
+                    if args.normalize:
+                        y0 = data[0, 0, 1]
+                        y, yerr = (y / y0), (yerr / y0)
 
                 if args.label:
                     label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
@@ -98,9 +106,6 @@ def plot(args):
 
             finally:
                 f.close()
-
-            if args.normalize:
-                y, yerr = (y / y[0]), (yerr / y[0])
 
             if args.axes in ('ylog', 'loglog'):
                 # use absolute y-values with logarithmic plot (for VACF)
