@@ -41,6 +41,10 @@ def plot(args):
 
     ci = 0
     for fn in args.input:
+        # cycle plot color
+        c = args.colors[ci % len(args.colors)]
+        ci += 1
+
         for dset in args.type:
             try:
                 f = tables.openFile(fn, mode='r')
@@ -102,10 +106,6 @@ def plot(args):
                 raise SystemExit('empty plot range')
 
 
-            # cycle plot color
-            c = args.colors[ci % len(args.colors)]
-            ci += 1
-
             if args.unordered:
                 # plot start point of each block
                 ax.plot(x[:, 0], y[:, 0], '+', color=c, ms=10, alpha=0.5, label=label)
@@ -114,7 +114,7 @@ def plot(args):
                     ax.plot(xi, yi, marker=(',', '3')[i % 2], color=c, lw=0.2, ms=3)
 
             elif dset == 'DIFF2MSD':
-                ax.plot(x, y, color=c, label=label)
+                ax.plot(x, y, 'o', markeredgecolor=c, markerfacecolor='none', markersize=5, label=label)
 
             else:
                 ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
