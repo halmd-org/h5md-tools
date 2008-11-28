@@ -158,11 +158,11 @@ def plot(args):
 
     if not title is None:
         plt.title(title)
-    plt.xlabel(r'$t^*$')
+    plt.xlabel(args.xlabel or r'$t^*$')
     if args.rescale:
-        plt.ylabel(ylabel[tep][3])
+        plt.ylabel(args.ylabel or ylabel[tep][3])
     else:
-        plt.ylabel(ylabel[tep][0])
+        plt.ylabel(args.ylabel or ylabel[tep][0])
 
     if args.output is None:
         plt.show()

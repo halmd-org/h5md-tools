@@ -90,11 +90,11 @@ def plot(args):
 
     plt.axis('tight')
     if not args.loglog:
-        plt.xlabel(r'number of particles / 1000')
-        plt.ylabel(r'computation time / ms')
+        plt.xlabel(args.xlabel or r'number of particles / 1000')
+        plt.ylabel(args.ylabel or r'computation time / ms')
     else:
-        plt.xlabel(r'number of particles')
-        plt.ylabel(r'computation time / s')
+        plt.xlabel(args.xlabel or r'number of particles')
+        plt.ylabel(args.ylabel or r'computation time / s')
 
     if args.output is None:
         plt.show()

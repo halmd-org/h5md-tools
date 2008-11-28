@@ -91,8 +91,8 @@ def plot(args):
 
     plt.plot(bins[:-1], g, color='m')
     plt.axis([0, cutoff, 0, max(g)])
-    plt.xlabel(r'particle distance $|\mathbf{r}_{ij}| / \sigma$')
-    plt.ylabel(r'pair distribution function $g(|\mathbf{r}_{ij}| / \sigma)$')
+    plt.xlabel(args.xlabel or r'particle distance $|\mathbf{r}_{ij}| / \sigma$')
+    plt.ylabel(args.ylabel or r'pair distribution function $g(|\mathbf{r}_{ij}| / \sigma)$')
     l = ax.legend(loc=args.legend)
     l.legendPatch.set_alpha(0.7)
 

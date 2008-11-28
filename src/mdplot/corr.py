@@ -157,14 +157,14 @@ def plot(args):
     if args.ylim:
         plot.ylim(args.ylim)
 
-    plot.xlabel(r'$\tau$')
+    plot.xlabel(args.xlabel or r'$\tau$')
     ylabel = {
         'MSD': r'$\langle(r(t+\tau)-r(t))^2\rangle$',
         'MQD': r'$\langle(r(t+\tau)-r(t))^4\rangle$',
         'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle(r(t+\tau)-r(t))^2\rangle$',
         'VAC': r'$\langle v(t+\tau)v(t)\rangle$',
     }
-    plot.ylabel(ylabel[dset])
+    plot.ylabel(args.ylabel or ylabel[dset])
 
     if args.output is None:
         plot.show()

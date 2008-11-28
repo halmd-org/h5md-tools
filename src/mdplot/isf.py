@@ -85,8 +85,8 @@ def plot(args):
         'ISF': r'$F(q, \tau)$',
         'SISF': r'$F_s(q, \tau)$',
     }
-    plt.xlabel(r'$\tau$')
-    plt.ylabel(ylabel[args.type])
+    plt.xlabel(args.xlabel or r'$\tau$')
+    plt.ylabel(args.ylabel or ylabel[args.type])
 
     if args.output is None:
         plt.show()
