@@ -90,15 +90,6 @@ def plot(args):
         finally:
             f.close()
 
-        if args.xaxis:
-            # limit data points to given x-axis range
-            i = where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
-            x, y, yerr = x[i], y[i], yerr[i]
-        if args.yaxis:
-            # limit data points to given y-axis range
-            i = where((y >= args.yaxis[0]) & (x <= args.yaxis[1]))
-            x, y, yerr = x[i], y[i], yerr[i]
-
         if args.normalize:
             y, yerr = (y / y[0]), (yerr / y[0])
 
@@ -155,7 +146,12 @@ def plot(args):
     if not title is None:
         plot.title(title)
 
-    plot.axis('tight')
+    axlim = plot.axis('tight')
+    if args.xlim:
+        plot.xlim(args.xlim)
+    if args.ylim:
+        plot.ylim(args.ylim)
+
     plot.xlabel(r'$\tau$')
     ylabel = {
         'MSD': r'$\langle(r(t+\tau)-r(t))^2\rangle$',
@@ -175,8 +171,8 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
     parser.add_argument('--type', required=True, choices=['MSD', 'MQD', 'VAC', 'DIFF2MSD'], help='correlation function')
-    parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
-    parser.add_argument('--yaxis', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
+    parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
+    parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--unordered', action='store_true', help='disable block time ordering')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
