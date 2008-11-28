@@ -39,8 +39,14 @@ def plot(args):
     if not args.axes in ('ylog', 'loglog'):
         ax.axhline(y=0, color='black')
 
+    if args.power:
+        try:
+            power_law = reshape(args.power, (-1, 4))
+        except ValueError:
+            raise SystemExit('power law requires 4 parameters')
+
     ci = 0
-    for fn in args.input:
+    for i, fn in enumerate(args.input):
         # cycle plot color
         c = args.colors[ci % len(args.colors)]
         ci += 1
@@ -114,17 +120,18 @@ def plot(args):
                     ax.plot(xi, yi, marker=(',', '3')[i % 2], color=c, lw=0.2, ms=3)
 
             elif dset == 'DIFF2MSD':
-                ax.plot(x, y, 'o', markeredgecolor=c, markerfacecolor='none', markersize=5, label=label)
+                ax.plot(x, y, 'o', markeredgecolor=c, markerfacecolor='none', markersize=5)
 
             else:
                 ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
 
-    if args.power:
-        # plot power law
-        pexp, pcoeff, px0, px1 = args.power
-        px = logspace(log10(px0), log10(px1), num=20)
-        py = pcoeff * pow(px, pexp)
-        ax.plot(px, py, '--', color='grey')
+        if args.power:
+            for j in range(i, len(power_law), len(args.input)):
+                # plot power law
+                pexp, pcoeff, px0, px1 = power_law[j]
+                px = logspace(log10(px0), log10(px1), num=20)
+                py = pcoeff * pow(px, pexp)
+                ax.plot(px, py, '--', color=c)
 
     # optionally plot with logarithmic scale(s)
     if args.axes == 'xlog':
@@ -171,5 +178,5 @@ def add_parser(subparsers):
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--unordered', action='store_true', help='disable block time ordering')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
-    parser.add_argument('--power', type=float, nargs=4, help='plot power law')
+    parser.add_argument('--power', type=float, nargs='+', help='plot power law(s)')
 
