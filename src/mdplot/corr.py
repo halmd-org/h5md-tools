@@ -134,7 +134,7 @@ def plot(args):
                 pexp, pcoeff, px0, px1 = power_law[j]
                 px = logspace(log10(px0), log10(px1), num=20)
                 py = pcoeff * pow(px, pexp)
-                ax.plot(px, py, '--', color=c)
+                ax.plot(px, py, ':', color='k', lw=2)
 
     # optionally plot with logarithmic scale(s)
     if args.axes == 'xlog':
