@@ -121,15 +121,6 @@ def plot(args):
             # divide by squared timestep
             y = y / pow(timestep, 2)
 
-        if args.xaxis:
-            # limit data points to given x-axis range
-            i = where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
-            x, y = x[i], y[i]
-        if args.yaxis:
-            # limit data points to given y-axis range
-            i = where((y >= args.yaxis[0]) & (y <= args.yaxis[1]))
-            x, y = x[i], y[i]
-
         if not len(x) or not len(y):
             raise SystemExit('empty plot range')
 
@@ -161,6 +152,12 @@ def plot(args):
     l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
     l.legendPatch.set_alpha(0.7)
 
+    plt.axis('tight')
+    if args.xlim:
+        plt.xlim(args.xlim)
+    if args.ylim:
+        plt.ylim(args.ylim)
+
     if not title is None:
         plt.title(title)
     plt.xlabel(r'$t^*$')
@@ -179,8 +176,8 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('en', help='thermal equilibrium properties')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 energy file')
     parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM'], help='thermal equilibrium property')
-    parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
-    parser.add_argument('--yaxis', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
+    parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
+    parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
     parser.add_argument('--rescale', action='store_true', help='substract zero value and divide by squared timestep')
 
