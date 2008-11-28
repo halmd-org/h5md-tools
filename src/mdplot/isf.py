@@ -53,7 +53,7 @@ def plot(args):
         f.close()
 
     ax = plt.axes()
-    ax.set_color_cycle(['m', 'b', 'c', 'g', 'r'])
+    ax.set_color_cycle(args.colors)
 
     for (d, n) in zip(data, norm):
         q = d[0, 0]
