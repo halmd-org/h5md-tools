@@ -62,20 +62,31 @@ def plot(args):
                 # merge block levels, discarding time zero
                 tcf = data[:, 1:, :]
 
-                if dset == 'DIFF2MSD':
-                    # calculate VACF from 2nd discrete derivative of MSD
-                    h = (tcf[:, 2:, 0] - tcf[:, :-2, 0]) / 2
-                    x = (tcf[:, 2:, 0] + tcf[:, :-2, 0]) / 2
-                    y = 0.5 * diff(tcf[:, :, 1], axis=1, n=2) / pow(h, 2)
+                if dset in ('DIFF2MSD', 'DIFFMSD'):
+                    if dset == 'DIFF2MSD':
+                        # calculate VACF from 2nd discrete derivative of MSD
+                        h = (data[:, 2:, 0] - data[:, :-2, 0]) / 2
+                        x = (data[:, 2:, 0] + data[:, :-2, 0]) / 2
+                        y = 0.5 * diff(data[:, :, 1], axis=1, n=2) / pow(h, 2)
+                        x, x0 = reshape(x[:, 1:], (-1, )), x[0, 0]
+                        y, y0 = reshape(y[:, 1:], (-1, )), y[0, 0]
+                    else:
+                        # calculate diffusion constant from 1st discrete derivative of MSD
+                        h = (data[:, 1:, 0] - data[:, :-1, 0]) / 2
+                        x = (data[:, 1:, 0] + data[:, :-1, 0]) / 2
+                        y = diff(data[:, :, 1], axis=1, n=1) / (6 * h)
+                        x, x0 = reshape(x[:, 1:], (-1, )), x[0, 0]
+                        y, y0 = reshape(y[:, 1:], (-1, )), y[0, 0]
 
                     if not args.unordered:
-                        x.shape = -1
-                        y.shape = -1
+                        # prepend time zero from lowest block
+                        x = append(x0, x)
+                        y = append(y0, y)
                         # time-order correlation function samples
                         time_order = x.argsort()
                         x, y = x[time_order], y[time_order]
 
-                    if args.normalize:
+                    if dset == 'DIFF2MSD' and args.normalize:
                         y0 = H5._v_children['VAC'][0, 0, 1]
                         y = y / y0
 
@@ -129,6 +140,9 @@ def plot(args):
                     py = y * pow(x, -args.power_inset)
                     inset.plot(x, py, 'o', markeredgecolor=c, markerfacecolor='none', markersize=3)
 
+            elif dset == 'DIFFMSD':
+                ax.plot(x, y, color=c, label=label)
+
             else:
                 ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
                 if args.power_inset:
@@ -176,9 +190,10 @@ def plot(args):
 
     plot.setp(ax, xlabel=args.xlabel or r'$\tau$')
     ylabel = {
-        'MSD': r'$\langle(r(t+\tau)-r(t))^2\rangle$',
-        'MQD': r'$\langle(r(t+\tau)-r(t))^4\rangle$',
-        'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle(r(t+\tau)-r(t))^2\rangle$',
+        'MSD': r'$\langle\delta r(\tau)^2\rangle$',
+        'MQD': r'$\langle\delta r(\tau)^4\rangle$',
+        'DIFFMSD': r'$\frac{1}{6}\frac{d}{dt}\langle\delta r(\tau)^2\rangle$',
+        'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle\delta r(\tau)^2\rangle$',
         'VAC': r'$\langle v(t+\tau)v(t)\rangle$',
     }
     plot.setp(ax, ylabel=args.ylabel or ylabel[dset])
@@ -192,7 +207,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
-    parser.add_argument('--type', nargs='+', choices=['MSD', 'MQD', 'DIFF2MSD', 'VAC'], help='correlation function')
+    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC'], help='correlation function')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
