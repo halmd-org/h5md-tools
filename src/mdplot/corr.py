@@ -41,83 +41,86 @@ def plot(args):
 
     ci = 0
     for fn in args.input:
-        try:
-            f = tables.openFile(fn, mode='r')
-        except IOError:
-            raise SystemExit('failed to open HDF5 file: %s' % fn)
+        for dset in args.type:
+            try:
+                f = tables.openFile(fn, mode='r')
+            except IOError:
+                raise SystemExit('failed to open HDF5 file: %s' % fn)
 
-        H5 = f.root
-        try:
-            data = H5._v_children[args.type[-3:]]
-            # merge block levels, discarding time zero
-            tcf = data[:, 1:, :]
+            H5 = f.root
+            try:
+                data = H5._v_children[dset[-3:]]
+                # merge block levels, discarding time zero
+                tcf = data[:, 1:, :]
 
-            if args.type == 'DIFF2MSD':
-                # calculate VACF from 2nd discrete derivative of MSD
-                h = (tcf[:, 2:, 0] - tcf[:, :-2, 0]) / 2
-                x = (tcf[:, 2:, 0] + tcf[:, :-2, 0]) / 2
-                y = 0.5 * diff(tcf[:, :, 1], axis=1, n=2) / pow(h, 2)
-                if not args.unordered:
-                    x.shape = -1
-                    y.shape = -1
-                    # time-order correlation function samples
-                    time_order = x.argsort()
-                    x, y = x[time_order], y[time_order]
+                if dset == 'DIFF2MSD':
+                    # calculate VACF from 2nd discrete derivative of MSD
+                    h = (tcf[:, 2:, 0] - tcf[:, :-2, 0]) / 2
+                    x = (tcf[:, 2:, 0] + tcf[:, :-2, 0]) / 2
+                    y = 0.5 * diff(tcf[:, :, 1], axis=1, n=2) / pow(h, 2)
+                    if not args.unordered:
+                        x.shape = -1
+                        y.shape = -1
+                        # time-order correlation function samples
+                        time_order = x.argsort()
+                        x, y = x[time_order], y[time_order]
 
-            else:
-                if args.unordered:
-                    x, y, yerr = tcf[:, :, 0], tcf[:, :, 1], tcf[:, :, 2]
                 else:
-                    tcf.shape = -1, tcf.shape[-1]
-                    # prepend time zero from lowest block
-                    tcf = concatenate((data[0, 0, :].reshape(1, tcf.shape[-1]), tcf))
-                    # time-order correlation function samples
-                    time_order = tcf[:, 0].argsort()
-                    x, y, yerr = tcf[time_order, 0], tcf[time_order, 1], tcf[time_order, 2]
+                    if args.unordered:
+                        x, y, yerr = tcf[:, :, 0], tcf[:, :, 1], tcf[:, :, 2]
+                    else:
+                        tcf.shape = -1, tcf.shape[-1]
+                        # prepend time zero from lowest block
+                        tcf = concatenate((data[0, 0, :].reshape(1, tcf.shape[-1]), tcf))
+                        # time-order correlation function samples
+                        time_order = tcf[:, 0].argsort()
+                        x, y, yerr = tcf[time_order, 0], tcf[time_order, 1], tcf[time_order, 2]
 
 
-            if args.label:
-                label = args.label % mdplot.label.attributes(H5.param)
+                if args.label:
+                    label = args.label % mdplot.label.attributes(H5.param)
+                else:
+                    basen = os.path.splitext(os.path.basename(fn))[0]
+                    label = r'{\small %s:%s}' % (dset, basen.replace('_', r'\_'))
+                if args.title:
+                    title = args.title % mdplot.label.attributes(H5.param)
+
+            except tables.exceptions.NoSuchNodeError:
+                raise SystemExit('missing simulation data in file: %s' % fn)
+
+            finally:
+                f.close()
+
+            if args.normalize:
+                y, yerr = (y / y[0]), (yerr / y[0])
+
+            if args.axes in ('ylog', 'loglog'):
+                # use absolute y-values with logarithmic plot (for VACF)
+                y = abs(y)
+
+            if not len(x) or not len(y):
+                raise SystemExit('empty plot range')
+
+
+            # cycle plot color
+            c = args.colors[ci % len(args.colors)]
+            ci += 1
+
+            if args.unordered:
+                # plot start point of each block
+                ax.plot(x[:, 0], y[:, 0], '+', color=c, ms=10, alpha=0.5, label=label)
+                # plot separate curve for each block
+                for (i, (xi, yi)) in enumerate(zip(x, y)):
+                    ax.plot(xi, yi, marker=(',', '3')[i % 2], color=c, lw=0.2, ms=3)
+
+            elif dset == 'DIFF2MSD':
+                ax.plot(x, y, color=c, label=label)
+
             else:
-                basen = os.path.splitext(os.path.basename(fn))[0]
-                label = r'{\small %s}' % basen.replace('_', r'\_')
-            if args.title:
-                title = args.title % mdplot.label.attributes(H5.param)
-
-        except tables.exceptions.NoSuchNodeError:
-            raise SystemExit('missing simulation data in file: %s' % fn)
-
-        finally:
-            f.close()
-
-        if args.normalize:
-            y, yerr = (y / y[0]), (yerr / y[0])
-
-        if args.axes in ('ylog', 'loglog'):
-            # use absolute y-values with logarithmic plot (for VACF)
-            y = abs(y)
-
-        if not len(x) or not len(y):
-            raise SystemExit('empty plot range')
+                ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
 
 
-        # cycle plot color
-        c = args.colors[ci % len(args.colors)]
-        ci += 1
-
-        if args.unordered:
-            # plot start point of each block
-            ax.plot(x[:, 0], y[:, 0], '+', color=c, ms=10, alpha=0.5, label=label)
-            # plot separate curve for each block
-            for (i, (xi, yi)) in enumerate(zip(x, y)):
-                ax.plot(xi, yi, marker=(',', '3')[i % 2], color=c, lw=0.2, ms=3)
-
-        elif args.type == 'DIFF2MSD':
-            ax.plot(x, y, color=c, label=label)
-
-        else:
-            ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
-
+        # fit only for last dataset
         if args.fit_power:
             # least-squares fit power law in given x-axis range
             pexp, xfit0, xfit1, x0, x1 = args.fit_power
@@ -156,10 +159,10 @@ def plot(args):
     ylabel = {
         'MSD': r'$\langle(r(t+\tau)-r(t))^2\rangle$',
         'MQD': r'$\langle(r(t+\tau)-r(t))^4\rangle$',
-        'VAC': r'$\langle v(t+\tau)v(t)\rangle$',
         'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle(r(t+\tau)-r(t))^2\rangle$',
+        'VAC': r'$\langle v(t+\tau)v(t)\rangle$',
     }
-    plot.ylabel(ylabel[args.type])
+    plot.ylabel(ylabel[dset])
 
     if args.output is None:
         plot.show()
@@ -170,7 +173,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
-    parser.add_argument('--type', required=True, choices=['MSD', 'MQD', 'VAC', 'DIFF2MSD'], help='correlation function')
+    parser.add_argument('--type', nargs='+', choices=['MSD', 'MQD', 'DIFF2MSD', 'VAC'], help='correlation function')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
