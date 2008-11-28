@@ -20,7 +20,7 @@
 
 import os, os.path
 from matplotlib import ticker
-from numpy import *
+from scipy import *
 import sys
 import tables
 import mdplot.label
@@ -87,8 +87,6 @@ def plot(args):
         H5 = f.root
         try:
             data = H5._v_children[tep]
-            if args.decimate:
-                data = data[::args.decimate, :]
             x = data[:, 0]
             if tep == 'VCM':
                 # positional coordinates dimension
@@ -101,6 +99,11 @@ def plot(args):
             else:
                 y = data[:, 1]
             timestep = H5.param.mdsim._v_attrs.timestep
+
+            if args.interpolate:
+                fi = interpolate.interp1d(x, y)
+                x = linspace(min(x), max(x), num=args.interpolate)
+                y = fi(x)
 
             if args.label:
                 label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
@@ -180,5 +183,5 @@ def add_parser(subparsers):
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
     parser.add_argument('--rescale', action='store_true', help='substract zero value and divide by squared timestep')
-    parser.add_argument('--decimate', type=int, help='plot every nth data point')
+    parser.add_argument('--interpolate', type=int, help='linear interpolation to given number of plot points')
 
