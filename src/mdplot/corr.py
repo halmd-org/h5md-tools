@@ -34,16 +34,17 @@ def plot(args):
 
     ax = plot.axes()
     title = None
+    inset = None
 
     # plot line for zero crossings
     if not args.axes in ('ylog', 'loglog'):
         ax.axhline(y=0, color='black', lw=0.5)
 
-    if args.power:
-        try:
-            power_law = reshape(args.power, (-1, 4))
-        except ValueError:
-            raise SystemExit('power law requires 4 parameters')
+    if args.power_inset:
+        if 'MSD' in args.type:
+            inset = plot.axes([0.55, 0.18, 0.33, 0.25])
+        else:
+            inset = plot.axes([0.66, 0.66, 0.22, 0.22])
 
     for i, fn in enumerate(args.input):
         # cycle plot color
@@ -124,26 +125,31 @@ def plot(args):
 
             elif dset == 'DIFF2MSD':
                 ax.plot(x, y, 'o', markeredgecolor=c, markerfacecolor='none', markersize=5)
+                if args.power_inset:
+                    py = y * pow(x, -args.power_inset)
+                    inset.plot(x, py, 'o', markeredgecolor=c, markerfacecolor='none', markersize=3)
 
             else:
                 ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
-
-        if args.power:
-            for j in range(i, len(power_law), len(args.input)):
-                # plot power law
-                pexp, pcoeff, px0, px1 = power_law[j]
-                px = logspace(log10(px0), log10(px1), num=20)
-                py = pcoeff * pow(px, pexp)
-                ax.plot(px, py, ':', color='k', lw=2)
+                if args.power_inset:
+                    py = y * pow(x, -args.power_inset)
+                    inset.plot(x, py, color=c)
 
     # optionally plot with logarithmic scale(s)
     if args.axes == 'xlog':
         ax.set_xscale('log')
+        if inset:
+            inset.set_xscale('log')
     if args.axes == 'ylog':
         ax.set_yscale('log')
+        if inset:
+            inset.set_yscale('log')
     if args.axes == 'loglog':
         ax.set_xscale('log')
         ax.set_yscale('log')
+        if inset:
+            inset.set_xscale('log')
+            inset.set_yscale('log')
 
     l = ax.legend(loc=args.legend)
     l.legendPatch.set_alpha(0.7)
@@ -151,20 +157,31 @@ def plot(args):
     if not title is None:
         plot.title(title)
 
-    axlim = plot.axis('tight')
+    ax.axis('tight')
     if args.xlim:
-        plot.xlim(args.xlim)
+        plot.setp(ax, xlim=args.xlim)
     if args.ylim:
-        plot.ylim(args.ylim)
+        plot.setp(ax, ylim=args.ylim)
 
-    plot.xlabel(args.xlabel or r'$\tau$')
+    if inset:
+        inset.axis('tight')
+        if args.inset_xlim:
+            plot.setp(inset, xlim=args.inset_xlim)
+        if args.inset_ylim:
+            plot.setp(inset, ylim=args.inset_ylim)
+        if args.inset_xlabel:
+            plot.setp(inset, xlabel=args.inset_xlabel)
+        if args.inset_ylabel:
+            plot.setp(inset, ylabel=args.inset_ylabel)
+
+    plot.setp(ax, xlabel=args.xlabel or r'$\tau$')
     ylabel = {
         'MSD': r'$\langle(r(t+\tau)-r(t))^2\rangle$',
         'MQD': r'$\langle(r(t+\tau)-r(t))^4\rangle$',
         'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle(r(t+\tau)-r(t))^2\rangle$',
         'VAC': r'$\langle v(t+\tau)v(t)\rangle$',
     }
-    plot.ylabel(args.ylabel or ylabel[dset])
+    plot.setp(ax, ylabel=args.ylabel or ylabel[dset])
 
     if args.output is None:
         plot.show()
@@ -181,5 +198,9 @@ def add_parser(subparsers):
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--unordered', action='store_true', help='disable block time ordering')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
-    parser.add_argument('--power', type=float, nargs='+', help='plot power law(s)')
+    parser.add_argument('--power-inset', type=float, help='plot power law inset')
+    parser.add_argument('--inset-xlim', metavar='VALUE', type=float, nargs=2, help='limit inset x-axis to given range')
+    parser.add_argument('--inset-ylim', metavar='VALUE', type=float, nargs=2, help='limit inset y-axis to given range')
+    parser.add_argument('--inset-xlabel', help='inset x-axis label')
+    parser.add_argument('--inset-ylabel', help='inset y-axis label')
 
