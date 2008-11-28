@@ -120,20 +120,6 @@ def plot(args):
                 ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
 
 
-        # fit only for last dataset
-        if args.fit_power:
-            # least-squares fit power law in given x-axis range
-            pexp, xfit0, xfit1, x0, x1 = args.fit_power
-            xfit = x[where((x >= xfit0) & (x <= xfit1))]
-            yfit = y[where((x >= xfit0) & (x <= xfit1))]
-            A = zeros((len(xfit), 1))
-            A[:, 0] = pow(xfit, pexp)
-            (p, residuals, rank, s) = linalg.lstsq(A, yfit)
-            # plot power law
-            px = logspace(log10(x0), log10(x1), num=20)
-            py = p * pow(px, pexp)
-            ax.plot(px, py, '--', color='grey')
-
     # optionally plot with logarithmic scale(s)
     if args.axes == 'xlog':
         ax.set_xscale('log')
@@ -179,5 +165,4 @@ def add_parser(subparsers):
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--unordered', action='store_true', help='disable block time ordering')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
-    parser.add_argument('--fit-power', type=float, nargs=5, help='least-squares fit given power law')
 
