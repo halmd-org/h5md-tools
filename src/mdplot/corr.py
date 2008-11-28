@@ -119,6 +119,12 @@ def plot(args):
             else:
                 ax.errorbar(x, y, yerr=yerr[0], color=c, label=label)
 
+    if args.power:
+        # plot power law
+        pexp, pcoeff, px0, px1 = args.power
+        px = logspace(log10(px0), log10(px1), num=20)
+        py = pcoeff * pow(px, pexp)
+        ax.plot(px, py, '--', color='grey')
 
     # optionally plot with logarithmic scale(s)
     if args.axes == 'xlog':
@@ -165,4 +171,5 @@ def add_parser(subparsers):
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--unordered', action='store_true', help='disable block time ordering')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
+    parser.add_argument('--power', type=float, nargs=4, help='plot power law')
 
