@@ -78,7 +78,7 @@ def plot(args):
             f.close()
 
     ax = plt.axes()
-    ax.set_color_cycle(['m', 'b', 'c', 'g', 'r'])
+    ax.set_color_cycle(args.colors)
 
     l = ax.legend(loc=args.legend)
     l.legendPatch.set_alpha(0.7)
