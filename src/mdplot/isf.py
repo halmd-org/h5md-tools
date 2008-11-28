@@ -66,11 +66,6 @@ def plot(args):
             y = y / n
             yerr = yerr / n
 
-        if args.xaxis:
-            # limit data points to given x-axis range
-            i = numpy.where((x >= args.xaxis[0]) & (x <= args.xaxis[1]))
-            x, y, yerr = x[i], y[i], yerr[i]
-
         if not len(x):
             raise SystemExit('empty plot range')
 
@@ -80,11 +75,16 @@ def plot(args):
     l = ax.legend(loc=args.legend, labelsep=0.01, pad=0.1, axespad=0.025)
     l.legendPatch.set_alpha(0.7)
 
+    plt.axis('tight')
+    if args.xlim:
+        plt.xlim(args.xlim)
+    if args.ylim:
+        plt.ylim(args.ylim)
+
     ylabel = {
         'ISF': r'$F(q, \tau)$',
         'SISF': r'$F_s(q, \tau)$',
     }
-    plt.axis('tight')
     plt.xlabel(r'$\tau$')
     plt.ylabel(ylabel[args.type])
 
@@ -98,6 +98,7 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('isf', help='intermediate scattering function')
     parser.add_argument('input', metavar='INPUT', help='HDF5 correlations file')
     parser.add_argument('--type', required=True, choices=['ISF', 'SISF'], help='correlation function')
-    parser.add_argument('--xaxis', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
+    parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
+    parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
 
