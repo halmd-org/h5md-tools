@@ -41,19 +41,19 @@ def plot(args):
             r'$\langle E(t^*)\rangle / \epsilon$',
             r'$\langle\langle E\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle E\rangle}$',
-            r'$\dfrac{\langle E(t^*)\rangle - \langle E(0)\rangle}{\delta t^2} / \epsilon$',
+            r'$\dfrac{\langle E(t^*)\rangle - \langle E(0)\rangle}{\delta t^2\epsilon}$',
         ],
         'EPOT': [
             r'$\langle U(t^*)\rangle / \epsilon$',
             r'$\langle\langle U\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle U\rangle}$',
-            r'$\dfrac{\langle U(t^*)\rangle - \langle U(0)\rangle}{\delta t^2} / \epsilon$',
+            r'$\dfrac{\langle U(t^*)\rangle - \langle U(0)\rangle}{\delta t^2 \epsilon}$',
         ],
         'EKIN': [
             r'$\langle T(t^*)\rangle / \epsilon$',
             r'$\langle\langle T\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle T\rangle}$',
-            r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\delta t^2} / \epsilon$',
+            r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\delta t^2\epsilon}$',
         ],
         'PRESS': [
             r'$\langle P(t^*)\rangle$',
