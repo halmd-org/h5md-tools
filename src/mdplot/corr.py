@@ -37,7 +37,7 @@ def plot(args):
 
     # plot line for zero crossings
     if not args.axes in ('ylog', 'loglog'):
-        ax.axhline(y=0, color='black')
+        ax.axhline(y=0, color='black', lw=0.5)
 
     if args.power:
         try:
