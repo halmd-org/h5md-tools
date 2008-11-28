@@ -78,8 +78,7 @@ def plot(args):
     ax = plt.axes()
     title = None
 
-    ci = 0
-    for fn in args.input:
+    for i, fn in enumerate(args.input):
         try:
             f = tables.openFile(fn, mode='r')
         except IOError:
@@ -102,10 +101,10 @@ def plot(args):
             timestep = H5.param.mdsim._v_attrs.timestep
 
             if args.label:
-                label = args.label % mdplot.label.attributes(H5.param)
+                label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
             else:
                 basen = os.path.splitext(os.path.basename(fn))[0]
-                label = r'{\small %s}' % basen.replace('_', r'\_')
+                label = basen.replace('_', r'\_')
             if args.title:
                 title = args.title % mdplot.label.attributes(H5.param)
 
@@ -125,8 +124,7 @@ def plot(args):
             raise SystemExit('empty plot range')
 
         # cycle plot color
-        c = args.colors[ci % len(args.colors)]
-        ci += 1
+        c = args.colors[i % len(args.colors)]
         ax.plot(x, y, color=c, label=label)
 
         if args.mean:

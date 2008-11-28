@@ -36,7 +36,7 @@ def main():
     rc('text.latex', preamble=r'\usepackage{amsmath}')
     if args.a4:
         rc('figure', figsize=[11.7, 8.3])
-    rc('legend', pad=0.2, labelsep=0.01, axespad=0.025, numpoints=1)
+    rc('legend', pad=0.2, labelsep=0.01, axespad=0.025, numpoints=1, fontsize=12)
 
     # set matplotlib backend
     if args.output is None:
@@ -60,7 +60,7 @@ def parse_args():
     parser.add_argument('--a4', action="store_true", help='DIN A4 format')
     parser.add_argument('--dpi', type=float, help='resolution in dots per inch')
     parser.add_argument('--colors', nargs='+', help='plot colors')
-    parser.add_argument('--label', help='legend label format')
+    parser.add_argument('--label', nargs='+', help='legend label format')
     parser.add_argument('--legend', help='legend placement')
     parser.add_argument('--title', help='plot title format')
     parser.set_defaults(

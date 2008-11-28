@@ -45,11 +45,9 @@ def plot(args):
         except ValueError:
             raise SystemExit('power law requires 4 parameters')
 
-    ci = 0
     for i, fn in enumerate(args.input):
         # cycle plot color
-        c = args.colors[ci % len(args.colors)]
-        ci += 1
+        c = args.colors[i % len(args.colors)]
 
         for dset in args.type:
             try:
@@ -88,10 +86,10 @@ def plot(args):
 
 
                 if args.label:
-                    label = args.label % mdplot.label.attributes(H5.param)
+                    label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
                 else:
                     basen = os.path.splitext(os.path.basename(fn))[0]
-                    label = r'{\small %s:%s}' % (dset, basen.replace('_', r'\_'))
+                    label = r'%s:%s' % (dset, basen.replace('_', r'\_'))
                 if args.title:
                     title = args.title % mdplot.label.attributes(H5.param)
 
