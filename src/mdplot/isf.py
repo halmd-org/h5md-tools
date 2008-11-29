@@ -53,6 +53,8 @@ def plot(args):
         f.close()
 
     ax = plt.axes()
+    # plot zero line
+    ax.axhline(y=0, color='black', lw=0.5)
     ax.set_color_cycle(args.colors)
 
     for (d, n) in zip(data, norm):

@@ -36,8 +36,8 @@ def plot(args):
     title = None
     inset = None
 
-    # plot line for zero crossings
     if not args.axes in ('ylog', 'loglog'):
+        # plot zero line
         ax.axhline(y=0, color='black', lw=0.5)
 
     if args.power_inset:

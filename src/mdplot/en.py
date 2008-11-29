@@ -84,6 +84,10 @@ def plot(args):
     ax = plt.axes()
     title = None
 
+    if args.zero or args.rescale:
+        # plot zero line
+        ax.axhline(y=0, color='black', lw=0.5)
+
     for i, fn in enumerate(args.input):
         try:
             f = tables.openFile(fn, mode='r')
