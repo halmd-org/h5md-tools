@@ -42,36 +42,42 @@ def plot(args):
             r'$\langle\langle E\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle E\rangle}$',
             r'$\dfrac{\langle E(t^*)\rangle - \langle E(0)\rangle}{\delta t^2\epsilon}$',
+            r'$\dfrac{\langle E(t^*)\rangle - \langle E(0)\rangle}{\epsilon}$',
         ],
         'EPOT': [
             r'$\langle U(t^*)\rangle / \epsilon$',
             r'$\langle\langle U\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle U\rangle}$',
             r'$\dfrac{\langle U(t^*)\rangle - \langle U(0)\rangle}{\delta t^2 \epsilon}$',
+            r'$\dfrac{\langle U(t^*)\rangle - \langle U(0)\rangle}{\epsilon}$',
         ],
         'EKIN': [
             r'$\langle T(t^*)\rangle / \epsilon$',
             r'$\langle\langle T\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle T\rangle}$',
             r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\delta t^2\epsilon}$',
+            r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\epsilon}$',
         ],
         'PRESS': [
             r'$\langle P(t^*)\rangle$',
             r'$\langle\langle P\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle P\rangle}$',
             r'$\dfrac{\langle P(t^*)\rangle - \langle P(0)\rangle}{\delta t^2}$',
+            r'$\langle P(t^*)\rangle - \langle P(0)\rangle$',
         ],
         'TEMP': [
             r'$\langle T(t^*)\rangle$',
             r'$\langle\langle T\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle T\rangle}$',
             r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\delta t^2}$',
+            r'$\langle T(t^*)\rangle - \langle T(0)\rangle$',
         ],
         'VCM': [
             r'$\vert\langle \textbf{v}^*(t^*)\rangle\vert$',
             r'$\langle\vert\langle \textbf{v}^*\rangle\vert\rangle_{t^*}$',
             r'$\sigma_{\vert\langle \textbf{v}^*\rangle\vert}$',
             r'$\dfrac{\vert\langle \textbf{v}^*(t^*)\rangle\vert - \vert\langle \textbf{v}^*(0)\rangle\vert}{\delta t^2}$',
+            r'$\vert\langle \textbf{v}^*(t^*)\rangle\vert - \vert\langle \textbf{v}^*(0)\rangle\vert$',
         ],
     }
 
@@ -119,9 +125,10 @@ def plot(args):
         finally:
             f.close()
 
-        if args.rescale:
+        if args.zero or args.rescale:
             # subtract zero value from data
             y = y - y[0];
+        if args.rescale:
             # divide by squared timestep
             y = y / pow(timestep, 2)
 
@@ -166,6 +173,8 @@ def plot(args):
     plt.xlabel(args.xlabel or r'$t^*$')
     if args.rescale:
         plt.ylabel(args.ylabel or ylabel[tep][3])
+    elif args.zero:
+        plt.ylabel(args.ylabel or ylabel[tep][4])
     else:
         plt.ylabel(args.ylabel or ylabel[tep][0])
 
@@ -182,6 +191,7 @@ def add_parser(subparsers):
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
+    parser.add_argument('--zero', action='store_true', help='substract zero value')
     parser.add_argument('--rescale', action='store_true', help='substract zero value and divide by squared timestep')
     parser.add_argument('--interpolate', type=int, help='linear interpolation to given number of plot points')
 
