@@ -23,6 +23,7 @@ from matplotlib import ticker
 from numpy import *
 import sys
 import tables
+import mdplot.label
 
 
 """
@@ -31,58 +32,67 @@ Plot intermediate scattering function
 def plot(args):
     from matplotlib import pyplot as plt
 
-    try:
-        f = tables.openFile(args.input, mode='r')
-    except IOError:
-        raise SystemExit('failed to open HDF5 file: %s' % args.input)
-
-    H5 = f.root
-    try:
-        # number of q-values
-        nq = H5.param.correlation._v_attrs.q_values
-        # merge block levels, discarding time zero
-        data = H5._v_children[args.type][:, :, 1:, :]
-        data.shape = nq, -1, data.shape[-1]
-        # F(q, 0) at lowest block level
-        norm = H5._v_children[args.type][:, 0, 0, 2]
-
-    except tables.exceptions.NoSuchNodeError:
-        raise SystemExit('missing simulation data in file: %s' % args.input)
-
-    finally:
-        f.close()
-
     ax = plt.axes()
     # plot zero line
     ax.axhline(y=0, color='black', lw=0.5)
     ax.set_color_cycle(args.colors)
 
-    # q-vector magnitudes
-    q_values = sorted(unique(data[:, :, 0]))
-    if args.q_values:
-        # generate intervals with q-vectors in interval centers
-        q_bins = (q_values + append((0, ), q_values[:-1])) / 2
-        # choose nearest neighbour q-vectors
-        q_values = choose(digitize(args.q_values, q_bins) - 1, q_values)
+    for i, fn in enumerate(args.input):
+        try:
+            f = tables.openFile(fn, mode='r')
+        except IOError:
+            raise SystemExit('failed to open HDF5 file: %s' % fn)
 
-    for q in q_values:
-        # select blocks with matching q-vector
-        d = data.compress(data[:, 0, 0] == q, axis=0)
-        # select norms with matching q-vector
-        n = norm.compress(data[:, 0, 0] == q, axis=0)
-        # time-order correlation function samples
-        time_order = d[0, :, 1].argsort()
-        x, y, yerr = d[0, time_order, 1], d[0, time_order, 2], d[0, time_order, 3]
+        H5 = f.root
+        try:
+            # number of q-values
+            nq = H5.param.correlation._v_attrs.q_values
+            # merge block levels, discarding time zero
+            data = H5._v_children[args.type][:, :, 1:, :]
+            data.shape = nq, -1, data.shape[-1]
+            # F(q, 0) at lowest block level
+            norm = H5._v_children[args.type][:, 0, 0, 2]
 
-        if args.normalize:
-            # normalize with F(q, 0)
-            y = y / n
-            yerr = yerr / n
+            # q-vector magnitudes
+            q_values = sorted(unique(data[:, :, 0]))
+            if args.q_values:
+                # generate intervals with q-vectors in interval centers
+                q_bins = (q_values + append((0, ), q_values[:-1])) / 2
+                # choose nearest neighbour q-vectors
+                q_values = choose(digitize(args.q_values, q_bins) - 1, q_values)
 
-        if not len(x):
-            raise SystemExit('empty plot range')
+            for q in q_values:
+                # select blocks with matching q-vector
+                d = data.compress(data[:, 0, 0] == q, axis=0)
+                # select norms with matching q-vector
+                n = norm.compress(data[:, 0, 0] == q, axis=0)
+                # time-order correlation function samples
+                time_order = d[0, :, 1].argsort()
+                x, y, yerr = d[0, time_order, 1], d[0, time_order, 2], d[0, time_order, 3]
 
-        ax.errorbar(x, y, yerr=yerr, label=r'$q = %.2f$' % q)
+                if args.normalize:
+                    # normalize with F(q, 0)
+                    y = y / n
+                    yerr = yerr / n
+
+                if not len(x):
+                    raise SystemExit('empty plot range')
+
+                if args.label:
+                    attrs = mdplot.label.attributes(H5.param)
+                    attrs['q'] = r'%.2f' % q
+                    label = args.label[i % len(args.label)] % attrs
+                else:
+                    basen = os.path.splitext(os.path.basename(fn))[0]
+                    label = r'%s: $q = %.2f$' % (basen.replace('_', r'\_'), q)
+
+                ax.errorbar(x, y, yerr=yerr, label=label)
+
+        except tables.exceptions.NoSuchNodeError:
+            raise SystemExit('missing simulation data in file: %s' % fn)
+
+        finally:
+            f.close()
 
     ax.set_xscale('log')
     l = ax.legend(loc=args.legend)
@@ -109,7 +119,7 @@ def plot(args):
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('isf', help='intermediate scattering function')
-    parser.add_argument('input', metavar='INPUT', help='HDF5 correlations file')
+    parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
     parser.add_argument('--type', required=True, choices=['ISF', 'SISF'], help='correlation function')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
