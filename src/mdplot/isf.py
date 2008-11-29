@@ -20,7 +20,7 @@
 
 import os, os.path
 from matplotlib import ticker
-import numpy
+from numpy import *
 import sys
 import tables
 
@@ -39,10 +39,10 @@ def plot(args):
     H5 = f.root
     try:
         # number of q-values
-        q_values = H5.param.correlation._v_attrs.q_values
+        nq = H5.param.correlation._v_attrs.q_values
         # merge block levels, discarding time zero
         data = H5._v_children[args.type][:, :, 1:, :]
-        data.shape = q_values, -1, data.shape[-1]
+        data.shape = nq, -1, data.shape[-1]
         # F(q, 0) at lowest block level
         norm = H5._v_children[args.type][:, 0, 0, 2]
 
@@ -57,11 +57,22 @@ def plot(args):
     ax.axhline(y=0, color='black', lw=0.5)
     ax.set_color_cycle(args.colors)
 
-    for (d, n) in zip(data, norm):
-        q = d[0, 0]
+    # q-vector magnitudes
+    q_values = sorted(unique(data[:, :, 0]))
+    if args.q_values:
+        # generate intervals with q-vectors in interval centers
+        q_bins = (q_values + append((0, ), q_values[:-1])) / 2
+        # choose nearest neighbour q-vectors
+        q_values = choose(digitize(args.q_values, q_bins) - 1, q_values)
+
+    for q in q_values:
+        # select blocks with matching q-vector
+        d = data.compress(data[:, 0, 0] == q, axis=0)
+        # select norms with matching q-vector
+        n = norm.compress(data[:, 0, 0] == q, axis=0)
         # time-order correlation function samples
-        i = d[:, 1].argsort()
-        x, y, yerr = d[i, 1], d[i, 2], d[i, 3]
+        time_order = d[0, :, 1].argsort()
+        x, y, yerr = d[0, time_order, 1], d[0, time_order, 2], d[0, time_order, 3]
 
         if args.normalize:
             # normalize with F(q, 0)
@@ -102,5 +113,6 @@ def add_parser(subparsers):
     parser.add_argument('--type', required=True, choices=['ISF', 'SISF'], help='correlation function')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
+    parser.add_argument('--q-values', type=float, nargs='+', help='q-vector magnitude(s)')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
 
