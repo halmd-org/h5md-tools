@@ -49,9 +49,15 @@ def plot(args):
             nq = H5.param.correlation._v_attrs.q_values
             # merge block levels, discarding time zero
             data = H5._v_children[args.type][:, :, 1:, :]
+            # F(q, 0) for each block
+            norm = H5._v_children[args.type][:, :, 0, 2]
+
+            if args.normalize:
+                # blockwise normalization
+                n = repeat(norm[..., newaxis], data.shape[-2], axis=-1)
+                data[..., 2], data[..., 3] = data[..., 2] / n, data[..., 3] / n
+
             data.shape = nq, -1, data.shape[-1]
-            # F(q, 0) at lowest block level
-            norm = H5._v_children[args.type][:, 0, 0, 2]
 
             # q-vector magnitudes
             q_values = sorted(unique(data[:, :, 0]))
@@ -69,11 +75,6 @@ def plot(args):
                 # time-order correlation function samples
                 time_order = d[0, :, 1].argsort()
                 x, y, yerr = d[0, time_order, 1], d[0, time_order, 2], d[0, time_order, 3]
-
-                if args.normalize:
-                    # normalize with F(q, 0)
-                    y = y / n
-                    yerr = yerr / n
 
                 if not len(x):
                     raise SystemExit('empty plot range')
