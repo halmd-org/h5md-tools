@@ -33,7 +33,7 @@ def plot(args):
     from matplotlib import pyplot as plot
 
     # thermal equilibrium property
-    tep = args.type
+    dset = args.type
 
     ylabel = {
         # type: absolute, mean, standard deviation, unit
@@ -101,9 +101,9 @@ def plot(args):
 
         H5 = f.root
         try:
-            data = H5._v_children[tep]
+            data = H5._v_children[dset]
             x = data[:, 0]
-            if tep == 'VCM':
+            if dset == 'VCM':
                 # positional coordinates dimension
                 dim = H5.param.mdsim._v_attrs.dimension
                 # calculate center of velocity magnitude
@@ -114,6 +114,12 @@ def plot(args):
             else:
                 y = data[:, 1]
             timestep = H5.param.mdsim._v_attrs.timestep
+            version = H5.param.program._v_attrs.version
+
+            # work around sampling bug yielding zero potential energy at time zero
+            if dset in ('ETOT', 'EPOT', 'PRESS') and version < 'v0.2.1-21-g16e09fc':
+                print >> sys.stderr, 'WARNING: detected buggy ljfluid version, discarding sample at time zero'
+                x, y = x[1:], y[1:]
 
             if args.xlim:
                 xi = where((x >= args.xlim[0]) & (x <= args.xlim[1]))
@@ -161,13 +167,13 @@ def plot(args):
             ax.axhspan(m - s, m + s, facecolor=c, edgecolor=c, alpha=0.1)
             # plot mean
             ax.axhline(m, linestyle='--', color=c, alpha=0.5)
-            ax.text(1.01 * x.max() - 0.01 * x.min(), m, r'%s' % ylabel[tep][1],
+            ax.text(1.01 * x.max() - 0.01 * x.min(), m, r'%s' % ylabel[dset][1],
                     verticalalignment='center', horizontalalignment='left')
             # plot values
-            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[tep][1], m),
+            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[dset][1], m),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
-            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[tep][2], s),
+            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[dset][2], s),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
 
@@ -203,11 +209,11 @@ def plot(args):
 
     plot.setp(ax, xlabel=args.xlabel or r'$t^*$')
     if args.rescale:
-        plot.setp(ax, ylabel=args.ylabel or ylabel[tep][3])
+        plot.setp(ax, ylabel=args.ylabel or ylabel[dset][3])
     elif args.zero:
-        plot.setp(ax, ylabel=args.ylabel or ylabel[tep][4])
+        plot.setp(ax, ylabel=args.ylabel or ylabel[dset][4])
     else:
-        plot.setp(ax, ylabel=args.ylabel or ylabel[tep][0])
+        plot.setp(ax, ylabel=args.ylabel or ylabel[dset][0])
 
     if args.output is None:
         plot.show()
