@@ -37,6 +37,7 @@ def plot(args):
     from matplotlib import pyplot as plot
 
     ax = plot.axes()
+    label = None
     ax.axhline(y=1, color='black', lw=0.5)
     ax.set_color_cycle(args.colors)
 
@@ -84,7 +85,7 @@ def plot(args):
 
             if args.label:
                 label = args.label[k % len(args.label)] % mdplot.label.attributes(H5.param)
-            else:
+            elif args.legend or not args.small:
                 basen = os.path.splitext(os.path.basename(fn))[0]
                 label = basen.replace('_', r'\_')
 
@@ -111,8 +112,9 @@ def plot(args):
 
     plot.setp(ax, xlabel=args.xlabel or r'$|\mathbf{r}_{ij}| / \sigma$')
     plot.setp(ax, ylabel=args.ylabel or r'$g(|\mathbf{r}_{ij}| / \sigma)$')
-    l = ax.legend(loc=args.legend)
-    l.legendPatch.set_alpha(0.7)
+    if args.legend or not args.small:
+        l = ax.legend(loc=args.legend)
+        l.legendPatch.set_alpha(0.7)
 
     if args.output is None:
         plot.show()

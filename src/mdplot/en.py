@@ -42,21 +42,21 @@ def plot(args):
             r'$\langle\langle E\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle E\rangle}$',
             r'$\dfrac{\langle E(t^*)\rangle - \langle E(0)\rangle}{\delta t^2\epsilon}$',
-            r'$\dfrac{\langle E(t^*)\rangle - \langle E(0)\rangle}{\epsilon}$',
+            r'$(\langle E(t^*)\rangle - \langle E(0)\rangle) / \epsilon$',
         ],
         'EPOT': [
             r'$\langle U(t^*)\rangle / \epsilon$',
             r'$\langle\langle U\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle U\rangle}$',
             r'$\dfrac{\langle U(t^*)\rangle - \langle U(0)\rangle}{\delta t^2 \epsilon}$',
-            r'$\dfrac{\langle U(t^*)\rangle - \langle U(0)\rangle}{\epsilon}$',
+            r'$(\langle U(t^*)\rangle - \langle U(0)\rangle) / \epsilon$',
         ],
         'EKIN': [
             r'$\langle T(t^*)\rangle / \epsilon$',
             r'$\langle\langle T\rangle\rangle_{t^*}$',
             r'$\sigma_{\langle T\rangle}$',
             r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\delta t^2\epsilon}$',
-            r'$\dfrac{\langle T(t^*)\rangle - \langle T(0)\rangle}{\epsilon}$',
+            r'$(\langle T(t^*)\rangle - \langle T(0)\rangle) / \epsilon$',
         ],
         'PRESS': [
             r'$\langle P(t^*)\rangle$',
@@ -82,6 +82,7 @@ def plot(args):
     }
 
     ax = plt.axes()
+    label = None
     title = None
 
     if args.zero or args.rescale:
@@ -117,7 +118,7 @@ def plot(args):
 
             if args.label:
                 label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
-            else:
+            elif args.legend or not args.small:
                 basen = os.path.splitext(os.path.basename(fn))[0]
                 label = basen.replace('_', r'\_')
             if args.title:
@@ -163,8 +164,9 @@ def plot(args):
     major_formatter.set_powerlimits((-3, 4))
     ax.yaxis.set_major_formatter(major_formatter)
 
-    l = ax.legend(loc=args.legend)
-    l.legendPatch.set_alpha(0.7)
+    if args.legend or not args.small:
+        l = ax.legend(loc=args.legend)
+        l.legendPatch.set_alpha(0.7)
 
     plt.axis('tight')
     if args.xlim:

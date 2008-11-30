@@ -33,6 +33,7 @@ def plot(args):
     from matplotlib import pyplot as plot
 
     ax = plot.axes()
+    label = None
     title = None
     inset = None
 
@@ -107,7 +108,7 @@ def plot(args):
 
                 if args.label:
                     label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
-                else:
+                elif args.legend or not args.small:
                     basen = os.path.splitext(os.path.basename(fn))[0]
                     label = r'%s:%s' % (dset, basen.replace('_', r'\_'))
                 if args.title:
@@ -165,8 +166,9 @@ def plot(args):
             inset.set_xscale('log')
             inset.set_yscale('log')
 
-    l = ax.legend(loc=args.legend)
-    l.legendPatch.set_alpha(0.7)
+    if args.legend or not args.small:
+        l = ax.legend(loc=args.legend)
+        l.legendPatch.set_alpha(0.7)
 
     if not title is None:
         plot.title(title)

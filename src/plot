@@ -34,9 +34,13 @@ def main():
     rc('font', family='serif', serif=['Computer Modern Roman'])
     rc('text', usetex=True)
     rc('text.latex', preamble=r'\usepackage{amsmath}')
-    if args.a4:
-        rc('figure', figsize=[11.7, 8.3])
     rc('legend', pad=0.2, labelsep=0.01, axespad=0.025, numpoints=1, fontsize=12)
+    if args.a4:
+        rc('figure', figsize=(11.7, 8.3))
+    elif args.small:
+        rc('figure', figsize=(4, 3))
+        rc('font', size=8)
+        rc('legend', fontsize=8)
 
     # set matplotlib backend
     if args.output is None:
@@ -58,6 +62,7 @@ def parse_args():
     parser = argparse.ArgumentParser(prog='mdplot')
     parser.add_argument('--output', help='output filename')
     parser.add_argument('--a4', action="store_true", help='DIN A4 format')
+    parser.add_argument('--small', action="store_true", help='small figure size')
     parser.add_argument('--dpi', type=float, help='resolution in dots per inch')
     parser.add_argument('--colors', nargs='+', help='plot colors')
     parser.add_argument('--label', nargs='+', help='legend label format')
@@ -90,7 +95,6 @@ def parse_args():
                 (0.66, 0.34, 0.65),
                 (0.99, 0.41, 0.23),
             ],
-            legend='best',
             )
 
     subparsers = parser.add_subparsers(dest='command', help='available plot modules')

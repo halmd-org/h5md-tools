@@ -33,6 +33,7 @@ def plot(args):
     from matplotlib import pyplot as plt
 
     ax = plt.axes()
+    label = None
     # plot zero line
     ax.axhline(y=0, color='black', lw=0.5)
 
@@ -83,7 +84,7 @@ def plot(args):
                     attrs = mdplot.label.attributes(H5.param)
                     attrs['q'] = r'%.2f' % q
                     label = args.label[i % len(args.label)] % attrs
-                else:
+                elif args.legend or not args.small:
                     basen = os.path.splitext(os.path.basename(fn))[0]
                     label = r'%s: $q = %.2f$' % (basen.replace('_', r'\_'), q)
 
@@ -105,8 +106,9 @@ def plot(args):
             f.close()
 
     ax.set_xscale('log')
-    l = ax.legend(loc=args.legend)
-    l.legendPatch.set_alpha(0.7)
+    if args.legend or not args.small:
+        l = ax.legend(loc=args.legend)
+        l.legendPatch.set_alpha(0.7)
 
     plt.axis('tight')
     if args.xlim:

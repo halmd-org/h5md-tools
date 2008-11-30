@@ -80,8 +80,9 @@ def plot(args):
     ax = plt.axes()
     ax.set_color_cycle(args.colors)
 
-    l = ax.legend(loc=args.legend)
-    l.legendPatch.set_alpha(0.7)
+    if args.legend or not args.small:
+        l = ax.legend(loc=args.legend)
+        l.legendPatch.set_alpha(0.7)
 
     plot = args.loglog and plt.loglog or plt.plot
     for (density, set) in sorted(data.iteritems()):
