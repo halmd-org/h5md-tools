@@ -40,7 +40,7 @@ def plot(args):
     ax.axhline(y=1, color='black', lw=0.5)
     ax.set_color_cycle(args.colors)
 
-    for i, fn in enumerate(args.input):
+    for k, fn in enumerate(args.input):
         try:
             f = tables.openFile(fn, mode='r')
         except IOError:
@@ -83,7 +83,7 @@ def plot(args):
                 H = H + 2 * h
 
             if args.label:
-                label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
+                label = args.label[k % len(args.label)] % mdplot.label.attributes(H5.param)
             else:
                 basen = os.path.splitext(os.path.basename(fn))[0]
                 label = basen.replace('_', r'\_')
