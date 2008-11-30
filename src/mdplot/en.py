@@ -115,6 +115,10 @@ def plot(args):
                 y = data[:, 1]
             timestep = H5.param.mdsim._v_attrs.timestep
 
+            if args.xlim:
+                xi = where((x >= args.xlim[0]) & (x <= args.xlim[1]))
+                x, y = x[xi], y[xi]
+
             if args.interpolate:
                 fi = interpolate.interp1d(x, y)
                 x = linspace(min(x), max(x), num=args.interpolate)
