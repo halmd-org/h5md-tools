@@ -30,7 +30,7 @@ import mdplot.label
 Plot mean total energy per particle
 """
 def plot(args):
-    from matplotlib import pyplot as plt
+    from matplotlib import pyplot as plot
 
     # thermal equilibrium property
     tep = args.type
@@ -81,9 +81,13 @@ def plot(args):
         ],
     }
 
-    ax = plt.axes()
+    ax = plot.axes()
     label = None
     title = None
+    inset = None
+
+    if args.inset:
+        inset = plot.axes(args.inset)
 
     if args.zero or args.rescale:
         # plot zero line
@@ -144,6 +148,9 @@ def plot(args):
         c = args.colors[i % len(args.colors)]
         ax.plot(x, y, color=c, label=label)
 
+        if args.inset:
+            inset.plot(x, y, color=c)
+
         if args.mean:
             m, s = mean(y), std(y)
             # plot standard deviation
@@ -163,31 +170,45 @@ def plot(args):
     major_formatter = ticker.ScalarFormatter()
     major_formatter.set_powerlimits((-3, 4))
     ax.yaxis.set_major_formatter(major_formatter)
+    if args.inset:
+        inset.yaxis.set_major_formatter(major_formatter)
 
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
         l.legendPatch.set_alpha(0.7)
 
-    plt.axis('tight')
+    ax.axis('tight')
     if args.xlim:
-        plt.xlim(args.xlim)
+        plot.setp(ax, xlim=args.xlim)
     if args.ylim:
-        plt.ylim(args.ylim)
+        plot.setp(ax, ylim=args.ylim)
+
+    if inset:
+        inset.axis('tight')
+        if args.inset_xlim:
+            plot.setp(inset, xlim=args.inset_xlim)
+        if args.inset_ylim:
+            plot.setp(inset, ylim=args.inset_ylim)
+        if args.inset_xlabel:
+            plot.setp(inset, xlabel=args.inset_xlabel)
+        if args.inset_ylabel:
+            plot.setp(inset, ylabel=args.inset_ylabel)
 
     if not title is None:
-        plt.title(title)
-    plt.xlabel(args.xlabel or r'$t^*$')
+        plot.title(title)
+
+    plot.setp(ax, xlabel=args.xlabel or r'$t^*$')
     if args.rescale:
-        plt.ylabel(args.ylabel or ylabel[tep][3])
+        plot.setp(ax, ylabel=args.ylabel or ylabel[tep][3])
     elif args.zero:
-        plt.ylabel(args.ylabel or ylabel[tep][4])
+        plot.setp(ax, ylabel=args.ylabel or ylabel[tep][4])
     else:
-        plt.ylabel(args.ylabel or ylabel[tep][0])
+        plot.setp(ax, ylabel=args.ylabel or ylabel[tep][0])
 
     if args.output is None:
-        plt.show()
+        plot.show()
     else:
-        plt.savefig(args.output, dpi=args.dpi)
+        plot.savefig(args.output, dpi=args.dpi)
 
 
 def add_parser(subparsers):
@@ -200,4 +221,9 @@ def add_parser(subparsers):
     parser.add_argument('--zero', action='store_true', help='substract zero value')
     parser.add_argument('--rescale', action='store_true', help='substract zero value and divide by squared timestep')
     parser.add_argument('--interpolate', type=int, help='linear interpolation to given number of plot points')
+    parser.add_argument('--inset', metavar='VALUE', type=float, nargs=4, help='plot inset')
+    parser.add_argument('--inset-xlim', metavar='VALUE', type=float, nargs=2, help='limit inset x-axis to given range')
+    parser.add_argument('--inset-ylim', metavar='VALUE', type=float, nargs=2, help='limit inset y-axis to given range')
+    parser.add_argument('--inset-xlabel', help='inset x-axis label')
+    parser.add_argument('--inset-ylabel', help='inset y-axis label')
 
