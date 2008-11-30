@@ -35,9 +35,9 @@ def plot(args):
     ax = plt.axes()
     # plot zero line
     ax.axhline(y=0, color='black', lw=0.5)
-    ax.set_color_cycle(args.colors)
 
-    for i, fn in enumerate(args.input):
+    i = 0
+    for fn in args.input:
         try:
             f = tables.openFile(fn, mode='r')
         except IOError:
@@ -87,7 +87,16 @@ def plot(args):
                     basen = os.path.splitext(os.path.basename(fn))[0]
                     label = r'%s: $q = %.2f$' % (basen.replace('_', r'\_'), q)
 
-                ax.errorbar(x, y, yerr=yerr, label=label)
+                # cycle plot styles
+                fmt = args.colors[i % len(args.colors)]
+                i += 1
+
+                if isinstance(fmt, str):
+                    # arbitrary plot style
+                    ax.errorbar(x, y, yerr=yerr, fmt=fmt, label=label)
+                else:
+                    # rgb color tuple
+                    ax.errorbar(x, y, yerr=yerr, color=fmt, label=label)
 
         except tables.exceptions.NoSuchNodeError:
             raise SystemExit('missing simulation data in file: %s' % fn)
