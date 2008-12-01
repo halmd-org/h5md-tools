@@ -121,6 +121,8 @@ def plot(args):
                 print >> sys.stderr, 'WARNING: detected buggy ljfluid version, discarding sample at time zero'
                 x, y = x[1:], y[1:]
 
+            y_zero = y[0]
+
             if args.xlim:
                 xi = where((x >= args.xlim[0]) & (x <= args.xlim[1]))
                 x, y = x[xi], y[xi]
@@ -134,6 +136,7 @@ def plot(args):
 
             if args.label:
                 attrs = mdplot.label.attributes(H5.param)
+                attrs['y_zero'] = r'%.2f' % y_zero
                 attrs['y_mean'] = r'%.3f' % y_mean
                 attrs['y_std'] = r'%#.2g' % y_std
                 label = args.label[i % len(args.label)] % attrs
