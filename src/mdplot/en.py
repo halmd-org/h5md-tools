@@ -185,7 +185,7 @@ def plot(args):
                     horizontalalignment='left')
 
     major_formatter = ticker.ScalarFormatter()
-    major_formatter.set_powerlimits((-3, 4))
+    major_formatter.set_powerlimits((-1, 4))
     ax.yaxis.set_major_formatter(major_formatter)
     if args.inset:
         inset.yaxis.set_major_formatter(major_formatter)
