@@ -125,13 +125,18 @@ def plot(args):
                 xi = where((x >= args.xlim[0]) & (x <= args.xlim[1]))
                 x, y = x[xi], y[xi]
 
+            y_mean, y_std = mean(y), std(y)
+
             if args.interpolate:
                 fi = interpolate.interp1d(x, y)
                 x = linspace(min(x), max(x), num=args.interpolate)
                 y = fi(x)
 
             if args.label:
-                label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
+                attrs = mdplot.label.attributes(H5.param)
+                attrs['y_mean'] = r'%.3f' % y_mean
+                attrs['y_std'] = r'%#.2g' % y_std
+                label = args.label[i % len(args.label)] % attrs
             elif args.legend or not args.small:
                 basen = os.path.splitext(os.path.basename(fn))[0]
                 label = basen.replace('_', r'\_')
@@ -162,18 +167,17 @@ def plot(args):
             inset.plot(x, y, color=c)
 
         if args.mean:
-            m, s = mean(y), std(y)
             # plot standard deviation
-            ax.axhspan(m - s, m + s, facecolor=c, edgecolor=c, alpha=0.1)
+            ax.axhspan(y_mean - y_std, y_mean + y_std, facecolor=c, edgecolor=c, alpha=0.1)
             # plot mean
-            ax.axhline(m, linestyle='--', color=c, alpha=0.5)
-            ax.text(1.01 * x.max() - 0.01 * x.min(), m, r'%s' % ylabel[dset][1],
+            ax.axhline(y_mean, linestyle='--', color=c, alpha=0.5)
+            ax.text(1.01 * x.max() - 0.01 * x.min(), y_mean, r'%y_std' % ylabel[dset][1],
                     verticalalignment='center', horizontalalignment='left')
             # plot values
-            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[dset][1], m),
+            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%y_std} = %.3g' % (ylabel[dset][1], y_mean),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
-            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[dset][2], s),
+            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%y_std} = %.3g' % (ylabel[dset][2], y_std),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
 
