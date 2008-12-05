@@ -117,10 +117,10 @@ def plot(args):
         plt.ylim(args.ylim)
 
     ylabel = {
-        'ISF': r'$F(q, \tau)$',
-        'SISF': r'$F_s(q, \tau)$',
+        'ISF': r'$F(q, \tau^*)$',
+        'SISF': r'$F_s(q, \tau^*)$',
     }
-    plt.xlabel(args.xlabel or r'$\tau$')
+    plt.xlabel(args.xlabel or r'$\tau^*$')
     plt.ylabel(args.ylabel or ylabel[args.type])
 
     if args.output is None:

@@ -110,8 +110,8 @@ def plot(args):
     if args.ylim:
         plot.setp(ax, ylim=args.ylim)
 
-    plot.setp(ax, xlabel=args.xlabel or r'$|\mathbf{r}_{ij}| / \sigma$')
-    plot.setp(ax, ylabel=args.ylabel or r'$g(|\mathbf{r}_{ij}| / \sigma)$')
+    plot.setp(ax, xlabel=args.xlabel or r'$r / \sigma$')
+    plot.setp(ax, ylabel=args.ylabel or r'$g(r)$')
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
         l.legendPatch.set_alpha(0.7)
