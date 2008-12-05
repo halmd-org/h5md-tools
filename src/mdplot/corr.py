@@ -127,7 +127,6 @@ def plot(args):
             if not len(x) or not len(y):
                 raise SystemExit('empty plot range')
 
-
             if args.unordered:
                 # plot start point of each block
                 ax.plot(x[:, 0], y[:, 0], '+', color=c, ms=10, alpha=0.5, label=label)
@@ -149,6 +148,14 @@ def plot(args):
                 if args.power_inset:
                     py = y * pow(x, -args.power_inset)
                     inset.plot(x, py, color=c)
+
+    # optionally plot power laws
+    if args.power_law:
+        p = reshape(args.power_law, (-1, 4))
+        for (pow_exp, pow_coeff, pow_xmin, pow_xmax) in p:
+            px = logspace(log10(pow_xmin), log10(pow_xmax), num=100)
+            py = pow_coeff * pow(px, pow_exp)
+            ax.plot(px, py, 'k--')
 
     # optionally plot with logarithmic scale(s)
     if args.axes == 'xlog':
@@ -215,6 +222,7 @@ def add_parser(subparsers):
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--unordered', action='store_true', help='disable block time ordering')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
+    parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s)')
     parser.add_argument('--power-inset', type=float, help='plot power law inset')
     parser.add_argument('--inset-xlim', metavar='VALUE', type=float, nargs=2, help='limit inset x-axis to given range')
     parser.add_argument('--inset-ylim', metavar='VALUE', type=float, nargs=2, help='limit inset y-axis to given range')
