@@ -197,13 +197,13 @@ def plot(args):
         if args.inset_ylabel:
             plot.setp(inset, ylabel=args.inset_ylabel)
 
-    plot.setp(ax, xlabel=args.xlabel or r'$\tau^*$')
+    plot.setp(ax, xlabel=args.xlabel or r'$t^*$')
     ylabel = {
-        'MSD': r'$\langle\delta r(\tau^*)^2\rangle\sigma^{-2}$',
-        'MQD': r'$\langle\delta r(\tau^*)^4\rangle\sigma^{-4}$',
-        'DIFFMSD': r'$\frac{1}{6}\frac{d}{dt}\langle\delta r(\tau^*)^2\rangle\sigma^{-2}$',
-        'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle\delta r(\tau^*)^2\rangle$',
-        'VAC': r'$\langle v(t+\tau^*)v(t)\rangle$',
+        'MSD': r'$\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
+        'MQD': r'$\langle\delta r(t^*)^4\rangle\sigma^{-4}$',
+        'DIFFMSD': r'$\frac{1}{6}\frac{d}{dt}\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
+        'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle\delta r(t^*)^2\rangle$',
+        'VAC': r'$\langle v(t^*)v(0)\rangle$',
     }
     plot.setp(ax, ylabel=args.ylabel or ylabel[dset])
 
