@@ -51,7 +51,7 @@ def plot(args):
             # particle density
             density = numpy.float32(H5.param.mdsim._v_attrs.density)
             # mean MD simulation step time in equilibration phase
-            time = H5.times.mdstep[0][0]
+            time = H5.times._v_children[args.type][0][0]
 
             if not density in data:
                 data[density] = {}
@@ -91,14 +91,14 @@ def plot(args):
         plot.setp(ax, ylim=args.ylim)
 
     if not args.loglog:
-        plot.setp(ax, xlabel=r'number of particles / 1000')
+        plot.setp(ax, xlabel=args.xlabel or r'number of particles / 1000')
         if args.speedup:
-            plot.setp(ax, ylabel=r'GPU speedup over CPU')
+            plot.setp(ax, ylabel=args.ylabel or r'GPU speedup over CPU')
         else:
-            plot.setp(ax, ylabel=r'mean MD step time / ms')
+            plot.setp(ax, ylabel=args.ylabel or r'mean MD step time / ms')
     else:
-        plot.setp(ax, xlabel=r'number of particles')
-        plot.setp(ax, ylabel=r'mean MD step time / s')
+        plot.setp(ax, xlabel=args.xlabel or r'number of particles')
+        plot.setp(ax, ylabel=args.ylabel or r'mean MD step time / s')
 
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
@@ -113,8 +113,10 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('perf', help='computation time versus system size')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 performance files')
+    parser.add_argument('--type', help='performance counter type')
     parser.add_argument('--speedup', action='store_true', help='compare two data sets')
     parser.add_argument('--loglog', action='store_true', help='plot both axes with logarithmic scale')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
+    parser.set_defaults(type='mdstep')
 
