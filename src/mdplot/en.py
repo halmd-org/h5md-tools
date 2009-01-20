@@ -113,8 +113,12 @@ def plot(args):
                     y = sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
             else:
                 y = data[:, 1]
-            timestep = H5.param.mdsim._v_attrs.timestep
-            version = H5.param.program._v_attrs.version
+
+            try:
+                version = H5.param.program._v_attrs.version
+            except tables.exceptions.NoSuchNodeError:
+                # backwards compatibility
+                version = 'unknown'
 
             # work around sampling bug yielding zero potential energy at time zero
             if dset in ('ETOT', 'EPOT', 'PRESS') and version < 'v0.2.1-21-g16e09fc':
@@ -157,6 +161,7 @@ def plot(args):
             y = y - y[0];
         if args.rescale:
             # divide by squared timestep
+            timestep = H5.param.mdsim._v_attrs.timestep
             y = y / pow(timestep, 2)
 
         if not len(x) or not len(y):
