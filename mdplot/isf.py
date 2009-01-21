@@ -46,8 +46,12 @@ def plot(args):
 
         H5 = f.root
         try:
+            version = H5.param.program._v_attrs.version
             # number of q-values
-            nq = H5.param.correlation._v_attrs.q_values
+            if version < 'v0.2.5.2-2-g92f02d5':
+                nq = H5.param.correlation._v_attrs.q_values
+            else:
+                nq = len(H5.param.correlation._v_attrs.q_values)
             # merge block levels, discarding time zero
             data = H5._v_children[args.type][:, :, 1:, :]
             # F(q, 0) for each block
