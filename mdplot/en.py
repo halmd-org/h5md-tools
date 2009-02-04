@@ -116,6 +116,7 @@ def plot(args):
 
             try:
                 version = H5.param.program._v_attrs.version
+                timestep = H5.param.mdsim._v_attrs.timestep
             except tables.exceptions.NoSuchNodeError:
                 # backwards compatibility
                 version = 'unknown'
@@ -161,7 +162,6 @@ def plot(args):
             y = y - y[0];
         if args.rescale:
             # divide by squared timestep
-            timestep = H5.param.mdsim._v_attrs.timestep
             y = y / pow(timestep, 2)
 
         if not len(x) or not len(y):
