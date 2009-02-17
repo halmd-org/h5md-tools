@@ -33,7 +33,7 @@ def main():
     # set matplotlib defaults
     rc('font', family='serif', serif=['Computer Modern Roman'])
     rc('text', usetex=True)
-    rc('text.latex', preamble=r'\usepackage{amsmath}')
+    rc('text.latex', preamble=(r'\usepackage{amsmath}', r'\usepackage{underscore}'))
     rc('legend', pad=0.2, labelsep=0.01, axespad=0.025, numpoints=1, fontsize=12)
     if args.a4:
         rc('figure', figsize=(11.7, 8.3))
