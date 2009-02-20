@@ -179,13 +179,13 @@ def plot(args):
             ax.axhspan(y_mean - y_std, y_mean + y_std, facecolor=c, edgecolor=c, alpha=0.1)
             # plot mean
             ax.axhline(y_mean, linestyle='--', color=c, alpha=0.5)
-            ax.text(1.01 * x.max() - 0.01 * x.min(), y_mean, r'%y_std' % ylabel[dset][1],
+            ax.text(1.01 * x.max() - 0.01 * x.min(), y_mean, r'%s' % ylabel[dset][1],
                     verticalalignment='center', horizontalalignment='left')
             # plot values
-            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%y_std} = %.3g' % (ylabel[dset][1], y_mean),
+            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%s} = %.7g' % (ylabel[dset][1], y_mean),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
-            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%y_std} = %.3g' % (ylabel[dset][2], y_std),
+            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[dset][2], y_std),
                     transform = ax.transAxes, verticalalignment='center',
                     horizontalalignment='left')
 
