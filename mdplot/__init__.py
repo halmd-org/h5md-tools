@@ -1,1 +1,1 @@
-__all__ = ["corr", "en", "isf", "ngauss", "perf", "pdf", "ssf", "traj"]
+__all__ = ["chi4", "corr", "en", "isf", "ngauss", "perf", "pdf", "ssf", "traj"]
