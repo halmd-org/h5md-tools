@@ -66,7 +66,7 @@ def plot(args):
                 y1 = msd[time_order, 1]
                 y2 = mqd[time_order, 1]
 
-            y = 3 * y2 / (5 * y1 * y1)
+            y = 3 * y2 / (5 * y1 * y1) - 1
 
             if args.label:
                 label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
@@ -117,7 +117,7 @@ def plot(args):
         plot.setp(ax, ylim=args.ylim)
 
     plot.setp(ax, xlabel=args.xlabel or r'$t^*$')
-    plot.setp(ax, ylabel=args.ylabel or r'$\frac{3}{5} \frac{\langle\delta r(t^*)^4 \rangle}{\langle\delta r(t^*)^2 \rangle^2}$')
+    plot.setp(ax, ylabel=args.ylabel or r'$\frac{3}{5} \frac{\langle\delta r(t^*)^4 \rangle}{\langle\delta r(t^*)^2 \rangle^2} - 1$')
 
     if args.output is None:
         plot.show()
