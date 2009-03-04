@@ -120,6 +120,7 @@ def plot(args):
             finally:
                 f.close()
 
+            _y = y
             if args.axes in ('ylog', 'loglog'):
                 # use absolute y-values with logarithmic plot (for VACF)
                 y = abs(y)
@@ -135,7 +136,8 @@ def plot(args):
                     ax.plot(xi, yi, marker=(',', '3')[i % 2], color=c, lw=0.2, ms=3)
 
             elif dset == 'DIFF2MSD':
-                ax.plot(x, y, 'o', markeredgecolor=c, markerfacecolor='none', markersize=5)
+                ax.plot(x[_y > 0], y[_y > 0], '+', markeredgecolor=c, markerfacecolor='none', markersize=5)
+                ax.plot(x[_y < 0], y[_y < 0], 'o', markeredgecolor=c, markerfacecolor='none', markersize=5)
                 if args.power_inset:
                     py = y * pow(x, -args.power_inset)
                     inset.plot(x, py, 'o', markeredgecolor=c, markerfacecolor='none', markersize=3)
