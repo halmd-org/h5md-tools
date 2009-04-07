@@ -49,7 +49,7 @@ def plot(args):
                 raise SystemExit('conflicting program name in file: %s' % fn)
 
             # particle density
-            density = numpy.float32(H5.param.mdsim._v_attrs.density)
+            density = numpy.float32('%.5g' % H5.param.mdsim._v_attrs.density)
             # mean MD simulation step time in equilibration phase
             time = H5.times._v_children[args.type][0][0]
 
