@@ -82,7 +82,7 @@ def plot(args):
     plotf = args.loglog and plot.loglog or plot.plot
     for (density, set) in reversed(sorted(data.iteritems())):
         d = numpy.array(sorted(set.iteritems()))
-        plotf(d[:, 0], d[:, 1], '.-', label=r'$\rho^* = %.2g$' % density)
+        plotf(d[:, 0], d[:, 1], '.-', label=r'$\rho^* = %.1f$' % density)
 
     ax.axis('tight')
     if args.xlim:
