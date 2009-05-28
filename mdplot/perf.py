@@ -19,15 +19,15 @@
 #
 
 import os, os.path
-import numpy
 import sys
 import tables
+from numpy import *
 
 
 """
 Plot computation time versus system size
 """
-def plot(args):
+def perf(args, ax):
     from matplotlib import pyplot as plot
 
     name, variant = None, None
@@ -49,7 +49,7 @@ def plot(args):
                 raise SystemExit('conflicting program name in file: %s' % fn)
 
             # particle density
-            density = numpy.float32('%.5g' % H5.param.mdsim._v_attrs.density)
+            density = float32('%.5g' % H5.param.mdsim._v_attrs.density)
             # mean MD simulation step time in equilibration phase
             time = H5.times._v_children[args.type][0][0]
 
@@ -76,19 +76,10 @@ def plot(args):
         finally:
             f.close()
 
-    ax = plot.axes()
-    ax.set_color_cycle(args.colors)
-
-    plotf = args.loglog and plot.loglog or plot.plot
+    plotf = args.loglog and ax.loglog or ax.plot
     for (density, set) in reversed(sorted(data.iteritems())):
-        d = numpy.array(sorted(set.iteritems()))
+        d = array(sorted(set.iteritems()))
         plotf(d[:, 0], d[:, 1], '.-', label=r'$\rho^* = %.1f$' % density)
-
-    ax.axis('tight')
-    if args.xlim:
-        plot.setp(ax, xlim=args.xlim)
-    if args.ylim:
-        plot.setp(ax, ylim=args.ylim)
 
     if not args.loglog:
         plot.setp(ax, xlabel=args.xlabel or r'number of particles / 1000')
@@ -99,6 +90,75 @@ def plot(args):
     else:
         plot.setp(ax, xlabel=args.xlabel or r'number of particles')
         plot.setp(ax, ylabel=args.ylabel or r'mean MD step time / s')
+
+
+"""
+Plot composition of MD step times
+"""
+def perf_detail(args, ax):
+    from matplotlib import pyplot as plot
+    param = lambda f: sum((f.root.param.mdsim._v_attrs.particles,))
+    data = {}
+
+    steps = []
+    for fn in args.input:
+        try:
+            f = tables.openFile(fn, mode='r')
+        except IOError:
+            raise SystemExit('failed to open HDF5 file: %s' % fn)
+        x = param(f)
+        for dset in f.root.times._v_children:
+            y, n = f.root.times._v_children[dset][0][::2]
+            if not n > 0:
+                continue
+            if not dset in data:
+                data[dset] = []
+            data[dset].append((x, y, n))
+        steps.append(f.root.times.mdstep[0][2])
+        f.close()
+
+    offset = zeros((len(args.input)))
+    steps = array(steps)
+    c = 0
+    for counter, dset in reversed(sorted(data.iteritems())):
+        times = array(dset)
+        times = times[times[:, 0].argsort()]
+        color = args.colors[c % len(args.colors)]
+        if not counter == 'mdstep':
+            x, y = times[:, 0], array(offset[:])
+            offset += times[:, 1] * times[:, 2] / steps
+            x = x.tolist()
+            x.reverse()
+            x = array(x)
+            y = y.tolist()
+            y.reverse()
+            y = array(y)
+            x, y = append(x, times[:, 0]), append(y, offset)
+            ax.fill(x, y, lw=0, label=counter, facecolor=color)
+        else:
+            ax.plot(times[:, 0], times[:, 1], '.-', label=counter, color=color)
+        c += 1
+
+    plot.setp(ax, xlabel=args.xlabel or r'number of particles')
+    plot.setp(ax, ylabel=args.ylabel or r'mean MD step time / s')
+
+
+def plot(args):
+    from matplotlib import pyplot as plot
+
+    ax = plot.axes()
+    ax.set_color_cycle(args.colors)
+
+    if args.detail:
+        perf_detail(args, ax)
+    else:
+        perf(args, ax)
+
+    ax.axis('tight')
+    if args.xlim:
+        plot.setp(ax, xlim=args.xlim)
+    if args.ylim:
+        plot.setp(ax, ylim=args.ylim)
 
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
@@ -114,6 +174,7 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('perf', help='computation time versus system size')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 performance files')
     parser.add_argument('--type', help='performance counter type')
+    parser.add_argument('--detail', action='store_true', help='plot composition of MD step times')
     parser.add_argument('--speedup', action='store_true', help='compare two data sets')
     parser.add_argument('--loglog', action='store_true', help='plot both axes with logarithmic scale')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
