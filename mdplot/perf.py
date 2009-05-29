@@ -31,6 +31,7 @@ def perf(args, ax):
     from matplotlib import pyplot as plot
 
     name, variant = None, None
+    _data = {}
     data = {}
     for fn in args.input:
         try:
@@ -53,28 +54,33 @@ def perf(args, ax):
             # mean MD simulation step time in equilibration phase
             time = H5.times._v_children[args.type][0][0]
 
-            if not density in data:
-                data[density] = {}
+            if not density in _data:
+                _data[density] = {}
             if not args.loglog:
                 # number of particles in thousands
                 N = sum((H5.param.mdsim._v_attrs.particles,)) / 1000
-                if args.speedup and N in data[density]:
+                if args.speedup and N in _data[density]:
+                    if not density in data:
+                        data[density] = {}
                     # relative performance speedup
-                    data[density][N] = data[density][N] / (time * 1000)
+                    data[density][N] = _data[density][N] / (time * 1000)
                 else:
                     # computation time in milliseconds
-                    data[density][N] = time * 1000
+                    _data[density][N] = time * 1000
             else:
                 # number of particles
                 N = H5.param.mdsim._v_attrs.particles
                 # computation time in seconds
-                data[density][N] = time
+                _data[density][N] = time
 
         except tables.exceptions.NoSuchNodeError:
             print >> sys.stderr, 'WARNING: skipping invalid file: %s' % fn
 
         finally:
             f.close()
+
+    if not args.speedup:
+        data = _data
 
     plotf = args.loglog and ax.loglog or ax.plot
     for (density, set) in reversed(sorted(data.iteritems())):
