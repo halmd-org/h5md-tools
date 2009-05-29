@@ -57,7 +57,7 @@ def perf(args, ax):
                 data[density] = {}
             if not args.loglog:
                 # number of particles in thousands
-                N = H5.param.mdsim._v_attrs.particles / 1000
+                N = sum((H5.param.mdsim._v_attrs.particles,)) / 1000
                 if args.speedup and N in data[density]:
                     # relative performance speedup
                     data[density][N] = data[density][N] / (time * 1000)
