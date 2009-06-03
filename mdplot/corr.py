@@ -66,14 +66,14 @@ def plot(args):
                 if dset in ('DIFF2MSD', 'DIFFMSD'):
                     if dset == 'DIFF2MSD':
                         # calculate VACF from 2nd discrete derivative of MSD
-                        h = (data[:, 2:, 0] - data[:, :-2, 0]) / 2
+                        h = data[:, 2:, 0] - data[:, :-2, 0]
                         x = (data[:, 2:, 0] + data[:, :-2, 0]) / 2
                         y = 0.5 * diff(data[:, :, 1], axis=1, n=2) / pow(h, 2)
                         x, x0 = reshape(x[:, 1:], (-1, )), x[0, 0]
                         y, y0 = reshape(y[:, 1:], (-1, )), y[0, 0]
                     else:
-                        # calculate diffusion constant from 1st discrete derivative of MSD
-                        h = (data[:, 1:, 0] - data[:, :-1, 0]) / 2
+                        # calculate diffusion constant from central difference of MSD
+                        h = data[:, 1:, 0] - data[:, :-1, 0]
                         x = (data[:, 1:, 0] + data[:, :-1, 0]) / 2
                         y = diff(data[:, :, 1], axis=1, n=1) / (6 * h)
                         x, x0 = reshape(x[:, 1:], (-1, )), x[0, 0]
