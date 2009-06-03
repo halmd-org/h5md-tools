@@ -72,8 +72,8 @@ def plot(args):
                         x, x0 = reshape(x[:, 1:], (-1, )), x[0, 0]
                         y, y0 = reshape(y[:, 1:], (-1, )), y[0, 0]
                     else:
-                        # calculate diffusion constant from 1st discrete derivative of MSD
-                        h = (data[:, 1:, 0] - data[:, :-1, 0]) / 2
+                        # calculate diffusion constant from central difference of MSD
+                        h = data[:, 1:, 0] - data[:, :-1, 0]
                         x = (data[:, 1:, 0] + data[:, :-1, 0]) / 2
                         y = diff(data[:, :, 1], axis=1, n=1) / (6 * h)
                         x, x0 = reshape(x[:, 1:], (-1, )), x[0, 0]
