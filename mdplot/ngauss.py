@@ -46,6 +46,7 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f.root
+        dimension = H5.param.mdsim._v_attrs.dimension
         try:
             msd = H5._v_children['MSD']
             mqd = H5._v_children['MQD']
@@ -66,7 +67,7 @@ def plot(args):
                 y1 = msd[time_order, 1]
                 y2 = mqd[time_order, 1]
 
-            y = 3 * y2 / (5 * y1 * y1) - 1
+            y = dimension * y2 / ((2 + dimension) * y1 * y1) - 1
 
             if args.label:
                 label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
