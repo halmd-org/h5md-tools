@@ -117,8 +117,20 @@ def plot(args):
     if args.ylim:
         plot.setp(ax, ylim=args.ylim)
 
+    def gcd(a, b):
+        while b > 0:
+            a, b = b, a % b
+        return a
+
+    def frac(a, b):
+        d = gcd(a, b)
+        if b == d:
+            return '%d' % (a / d)
+        else:
+            return r'\frac{%d}{%d}' % (a / d, b / d)
+
     plot.setp(ax, xlabel=args.xlabel or r'$t^*$')
-    plot.setp(ax, ylabel=args.ylabel or r'$\frac{3}{5} \frac{\langle\delta r(t^*)^4 \rangle}{\langle\delta r(t^*)^2 \rangle^2} - 1$')
+    plot.setp(ax, ylabel=args.ylabel or r'$%s \frac{\langle\delta r(t^*)^4 \rangle}{\langle\delta r(t^*)^2 \rangle^2} - 1$' % frac(dimension, dimension + 2))
 
     if args.output is None:
         plot.show()
