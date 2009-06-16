@@ -54,20 +54,23 @@ def plot(args):
             msd = msd[:, 1:, :]
             mqd = mqd[:, 1:, :]
 
-            if args.unordered:
-                x = msd[:, :, 0]
-                y1 = msd[:, :, 1]
-                y2 = mqd[:, :, 1]
+            x = msd[:, :, 0]
+            if args.type == 'BURNETT':
+                h = x[:, 1:] - x[:, :-1]
+                x = (x[:, 1:] + x[:, :-1]) / 2
+                # Burnett coefficient from central difference
+                y = dimension * mqd[:, :, 1] / (2 + dimension) - pow(msd[:, :, 1], 2)
+                y = diff(y, axis=1, n=1) / (24 * h)
             else:
-                msd.shape = -1, msd.shape[-1]
-                mqd.shape = -1, mqd.shape[-1]
-                # time-order correlation function samples
-                time_order = msd[:, 0].argsort()
-                x = msd[time_order, 0]
-                y1 = msd[time_order, 1]
-                y2 = mqd[time_order, 1]
+                # non-Gaussian parameter
+                y = dimension * mqd[:, :, 1] / ((2 + dimension) * pow(msd[:, :, 1], 2)) - 1
 
-            y = dimension * y2 / ((2 + dimension) * y1 * y1) - 1
+            if not args.unordered:
+                x.shape = -1
+                y.shape = -1
+                # time-order correlation function samples
+                time_order = x.argsort()
+                x, y = x[time_order], y[time_order]
 
             if args.label:
                 label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
@@ -129,8 +132,13 @@ def plot(args):
         else:
             return r'\frac{%d}{%d}' % (a / d, b / d)
 
+    if args.type == 'BURNETT':
+        ylabel = r'$\frac{1}{4!}\frac{d}{dt}(%s\langle\delta r(t^*)^4 \rangle - \langle\delta r(t^*)^2 \rangle^2)$' % frac(dimension, dimension + 2)
+    else:
+        ylabel = r'$%s\frac{\langle\delta r(t^*)^4 \rangle}{\langle\delta r(t^*)^2 \rangle^2} - 1$' % frac(dimension, dimension + 2)
+
     plot.setp(ax, xlabel=args.xlabel or r'$t^*$')
-    plot.setp(ax, ylabel=args.ylabel or r'$%s \frac{\langle\delta r(t^*)^4 \rangle}{\langle\delta r(t^*)^2 \rangle^2} - 1$' % frac(dimension, dimension + 2))
+    plot.setp(ax, ylabel=args.ylabel or ylabel)
 
     if args.output is None:
         plot.show()
@@ -141,6 +149,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('ngauss', help='non-Gaussian parameter')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlation file')
+    parser.add_argument('--type', choices=['NGAUSS', 'BURNETT'], help='correlation function')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
