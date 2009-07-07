@@ -21,6 +21,7 @@
 import os, os.path
 from matplotlib import ticker
 from scipy import *
+from scipy.interpolate import interpolate
 import sys
 import tables
 import mdplot.label
