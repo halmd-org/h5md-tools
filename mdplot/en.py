@@ -33,7 +33,7 @@ Plot mean total energy per particle
 def plot(args):
     from matplotlib import pyplot as plot
 
-    # thermal equilibrium property
+    # equilibrium or stationary property
     dset = args.type
 
     ylabel = {
@@ -80,6 +80,13 @@ def plot(args):
             r'$(\vert\langle \textbf{v}^*(t^*)\rangle\vert - \vert\langle \textbf{v}^*(0)\rangle\vert) / \delta t^2$',
             r'$\vert\langle \textbf{v}^*(t^*)\rangle\vert - \vert\langle \textbf{v}^*(0)\rangle\vert$',
         ],
+        'VZ': [
+            r'$\langle v_z^*(t^*)\rangle$',
+            r'$\langle\langle v_z^*\rangle\rangle_{t^*}$',
+            r'$\sigma_{\langle v_z^*\rangle}$',
+            r'$(\langle v_z^*(t^*)\rangle - \langle v_z^*(0)\rangle) / \delta t^2$',
+            r'$\langle v_z^*(t^*)\rangle - \langle v_z^*(0)\rangle$',
+        ],
     }
 
     ax = plot.axes()
@@ -102,16 +109,21 @@ def plot(args):
 
         H5 = f.root
         try:
-            data = H5._v_children[dset]
+            # positional coordinates dimension
+            dim = H5.param.mdsim._v_attrs.dimension
+            if dset == 'VZ' and dim == 3:
+                data = H5._v_children['VCM']
+            else:
+                data = H5._v_children[dset]
             x = data[:, 0]
             if dset == 'VCM':
-                # positional coordinates dimension
-                dim = H5.param.mdsim._v_attrs.dimension
                 # calculate center of velocity magnitude
                 if dim == 3:
                     y = sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2] + data[:, 3] * data[:, 3])
                 else:
                     y = sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
+            elif dset == 'VZ' and dim == 3:
+                y = data[:, 3]
             else:
                 y = data[:, 1]
 
@@ -180,15 +192,14 @@ def plot(args):
             ax.axhspan(y_mean - y_std, y_mean + y_std, facecolor=c, edgecolor=c, alpha=0.1)
             # plot mean
             ax.axhline(y_mean, linestyle='--', color=c, alpha=0.5)
-            ax.text(1.01 * x.max() - 0.01 * x.min(), y_mean, r'%s' % ylabel[dset][1],
-                    verticalalignment='center', horizontalalignment='left')
             # plot values
-            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%s} = %.7g' % (ylabel[dset][1], y_mean),
-                    transform = ax.transAxes, verticalalignment='center',
-                    horizontalalignment='left')
-            ax.text(0.75, 0.075, r'\parbox{1.2cm}{%s} = %.3g' % (ylabel[dset][2], y_std),
-                    transform = ax.transAxes, verticalalignment='center',
-                    horizontalalignment='left')
+            ax.text(x.min(), y_mean + 1.5*y_std, r'\parbox{1.2cm}{%s} = %.3g $\pm$ %.3g' 
+                        % (ylabel[dset][1], y_mean, y_std),
+                    verticalalignment='bottom', horizontalalignment='left')
+#            ax.text(0.75, 0.125, r'\parbox{1.2cm}{%s} = %.7g $\pm$ %.3g' 
+#                        % (ylabel[dset][1], y_mean, y_std),
+#                    transform = ax.transAxes, verticalalignment='center',
+#                    horizontalalignment='left')
 
     major_formatter = ticker.ScalarFormatter()
     major_formatter.set_powerlimits((-1, 2))
@@ -235,9 +246,9 @@ def plot(args):
 
 
 def add_parser(subparsers):
-    parser = subparsers.add_parser('en', help='thermal equilibrium properties')
+    parser = subparsers.add_parser('en', help='equilibrium or stationary properties')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 energy file')
-    parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM'], help='thermal equilibrium property')
+    parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM', 'VZ'], help='equilibrium or stationary property')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
