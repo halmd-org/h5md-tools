@@ -55,13 +55,17 @@ def plot(args):
             try:
                 f = tables.openFile(fn, mode='r')
             except IOError:
-                raise SystemExit('failed to open HDF5 file: %s' % fn)
+                print 'Failed to open HDF5 file: %s' % fn
+                continue
 
             H5 = f.root
             try:
                 data = H5._v_children[dset[-3:]]
                 # merge block levels, discarding time zero
                 tcf = data[:, 1:, :]
+                if data.shape[0] == 0:
+                    print 'Skip empty data set: %s:%s' % (fn, dset)
+                    continue
 
                 if dset in ('DIFF2MSD', 'DIFFMSD'):
                     if dset == 'DIFF2MSD':
