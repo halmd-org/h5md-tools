@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.5
+#!/usr/bin/env python
 from distutils.core import setup
 from subprocess import Popen, PIPE
 
