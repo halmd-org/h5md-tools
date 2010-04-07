@@ -60,7 +60,10 @@ def plot(args):
 
             H5 = f.root
             try:
-                data = H5._v_children[dset[-3:]]
+                if dset in ('DIFF2MSD', 'DIFFMSD'):
+                    data = H5._v_children['MSD']
+                else:
+                    data = H5._v_children[dset]
                 # merge block levels, discarding time zero
                 tcf = data[:, 1:, :]
                 if data.shape[0] == 0:
@@ -124,6 +127,26 @@ def plot(args):
             finally:
                 f.close()
 
+            # rescale time by sigma/(mean velocity)
+            if args.rescale_time:
+                # calculate temperature from tep-file
+                try:
+                    fn_tep = '%s.tep' % os.path.splitext(fn)[0]
+                    f = tables.openFile(fn_tep, mode='r')
+                    temp = mean(f.root.TEMP[:, 1])
+
+                except IOError:
+                    raise SystemExit('Failed to open HD5 file: %s' % fn_tep)
+
+                except tables.exceptions.NoSuchNodeError:
+                    raise SystemExit('missing temperature data in file: %s' % fn_tep)
+
+                finally:
+                    f.close()
+
+                print fn, temp
+                x *= sqrt(3*temp)
+
             _y = y
             if args.axes in ('ylog', 'loglog'):
                 # use absolute y-values with logarithmic plot (for VACF)
@@ -181,7 +204,7 @@ def plot(args):
 
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
-        l.legendPatch.set_alpha(0.7)
+#        l.legendPatch.set_alpha(0.7)
 
     if not title is None:
         plot.title(title)
@@ -210,6 +233,7 @@ def plot(args):
         'DIFFMSD': r'$\frac{1}{6}\frac{d}{dt}\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
         'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle\delta r(t^*)^2\rangle$',
         'VAC': r'$\langle v(t^*)v(0)\rangle$',
+        'STRESS': r'$\eta(t)=\left\langle \Pi^{\alpha\beta}_0(t) \Pi^{\alpha\beta}_0(0)\right\rangle$',
     }
     plot.setp(ax, ylabel=args.ylabel or ylabel[dset])
 
@@ -222,12 +246,13 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
-    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC'], help='correlation function')
+    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC', 'STRESS'], help='correlation function')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--unordered', action='store_true', help='disable block time ordering')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
+    parser.add_argument('--rescale-time', action='store_true', help='rescale time by 1/sqrt(3*temp)')
     parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s)')
     parser.add_argument('--power-inset', type=float, help='plot power law inset')
     parser.add_argument('--inset-xlim', metavar='VALUE', type=float, nargs=2, help='limit inset x-axis to given range')
