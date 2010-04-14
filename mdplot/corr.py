@@ -48,10 +48,10 @@ def plot(args):
             inset = plot.axes([0.66, 0.66, 0.22, 0.22])
 
     for i, fn in enumerate(args.input):
-        # cycle plot color
-        c = args.colors[i % len(args.colors)]
+        for j, dset in enumerate(args.type):
+            # cycle plot color
+            c = args.colors[(i * len(args.type) + j) % len(args.colors)]
 
-        for dset in args.type:
             try:
                 f = tables.openFile(fn, mode='r')
             except IOError:
@@ -62,6 +62,8 @@ def plot(args):
             try:
                 if dset in ('DIFF2MSD', 'DIFFMSD'):
                     data = H5._v_children['MSD']
+                elif dset in('DIFF2HELFAND', 'DIFFHELFAND'):
+                    data = H5._v_children['HELFAND']
                 else:
                     data = H5._v_children[dset]
                 # merge block levels, discarding time zero
@@ -70,8 +72,8 @@ def plot(args):
                     print 'Skip empty data set: %s:%s' % (fn, dset)
                     continue
 
-                if dset in ('DIFF2MSD', 'DIFFMSD'):
-                    if dset == 'DIFF2MSD':
+                if dset in ('DIFF2MSD', 'DIFFMSD', 'DIFF2HELFAND', 'DIFFHELFAND'):
+                    if dset in ('DIFF2MSD', 'DIFF2HELFAND'):
                         # calculate VACF from 2nd discrete derivative of MSD
                         h = (data[:, 2:, 0] - data[:, :-2, 0]) / 2
                         x = (data[:, 2:, 0] + data[:, :-2, 0]) / 2
@@ -96,6 +98,10 @@ def plot(args):
 
                     if dset == 'DIFF2MSD' and args.normalize:
                         y0 = H5._v_children['VAC'][0, 0, 1]
+                        y = y / y0
+
+                    if dset == 'DIFF2HELFAND' and args.normalize:
+                        y0 = H5._v_children['STRESS'][0, 0, 1]
                         y = y / y0
 
                 else:
@@ -162,14 +168,14 @@ def plot(args):
                 for (i, (xi, yi)) in enumerate(zip(x, y)):
                     ax.plot(xi, yi, marker=(',', '3')[i % 2], color=c, lw=0.2, ms=3)
 
-            elif dset == 'DIFF2MSD':
-                ax.plot(x[_y > 0], y[_y > 0], '+', markeredgecolor=c, markerfacecolor='none', markersize=5)
+            elif dset in ('DIFF2MSD', 'DIFF2HELFAND'):
+                ax.plot(x[_y > 0], y[_y > 0], '+', markeredgecolor=c, markerfacecolor='none', markersize=5, label=label)
                 ax.plot(x[_y < 0], y[_y < 0], 'o', markeredgecolor=c, markerfacecolor='none', markersize=5)
                 if args.power_inset:
                     py = y * pow(x, -args.power_inset)
                     inset.plot(x, py, 'o', markeredgecolor=c, markerfacecolor='none', markersize=3)
 
-            elif dset == 'DIFFMSD':
+            elif dset in ('DIFFMSD', 'DIFFHELFAND'):
                 ax.plot(x, y, color=c, label=label)
 
             else:
@@ -234,6 +240,9 @@ def plot(args):
         'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle\delta r(t^*)^2\rangle$',
         'VAC': r'$\langle v(t^*)v(0)\rangle$',
         'STRESS': r'$\eta(t)=\left\langle \Pi^{\alpha\beta}_0(t) \Pi^{\alpha\beta}_0(0)\right\rangle$',
+        'HELFAND': r'$\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
+        'DIFFHELFAND': r'\frac{1}{2}\frac{d}{dt}$\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
+        'DIFF2HELFAND': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
     }
     plot.setp(ax, ylabel=args.ylabel or ylabel[dset])
 
@@ -246,7 +255,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
-    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC', 'STRESS'], help='correlation function')
+    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC', 'STRESS', 'HELFAND', 'DIFFHELFAND', 'DIFF2HELFAND'], help='correlation function')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
