@@ -59,13 +59,18 @@ def plot(args):
                 continue
 
             H5 = f.root
+            param = H5.param
             try:
+                if args.flavour:
+                    H5 = H5._v_children[args.flavour]
+
                 if dset in ('DIFF2MSD', 'DIFFMSD'):
                     data = H5._v_children['MSD']
                 elif dset in('DIFF2HELFAND', 'DIFFHELFAND'):
                     data = H5._v_children['HELFAND']
                 else:
                     data = H5._v_children[dset]
+
                 # merge block levels, discarding time zero
                 tcf = data[:, 1:, :]
                 if data.shape[0] == 0:
@@ -120,12 +125,12 @@ def plot(args):
                         y, yerr = (y / y0), (yerr / y0)
 
                 if args.label:
-                    label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
+                    label = args.label[i % len(args.label)] % mdplot.label.attributes(param)
                 elif args.legend or not args.small:
                     basen = os.path.splitext(os.path.basename(fn))[0]
                     label = r'%s:%s' % (dset, basen.replace('_', r'\_'))
                 if args.title:
-                    title = args.title % mdplot.label.attributes(H5.param)
+                    title = args.title % mdplot.label.attributes(param)
 
             except tables.exceptions.NoSuchNodeError:
                 raise SystemExit('missing simulation data in file: %s' % fn)
@@ -241,7 +246,7 @@ def plot(args):
         'VAC': r'$\langle v(t^*)v(0)\rangle$',
         'STRESS': r'$\eta(t)=\left\langle \Pi^{\alpha\beta}_0(t) \Pi^{\alpha\beta}_0(0)\right\rangle$',
         'HELFAND': r'$\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
-        'DIFFHELFAND': r'\frac{1}{2}\frac{d}{dt}$\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
+        'DIFFHELFAND': r'$\frac{1}{2}\frac{d}{dt}\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
         'DIFF2HELFAND': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
     }
     plot.setp(ax, ylabel=args.ylabel or ylabel[dset])
@@ -256,6 +261,7 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
     parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC', 'STRESS', 'HELFAND', 'DIFFHELFAND', 'DIFF2HELFAND'], help='correlation function')
+    parser.add_argument('--flavour', help='flavour of correlation functions, selects subgroup in HDF5 file')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')

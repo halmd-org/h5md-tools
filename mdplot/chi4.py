@@ -45,15 +45,22 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f.root
+        param = H5.param
         try:
-            version = H5.param.program._v_attrs.version
+            if args.flavour:
+                H5 = H5._v_children[args.flavour]
+
+            version = param.program._v_attrs.version
             # number of q-values
             if version < 'v0.2.5.2-2-g92f02d5':
-                nq = H5.param.correlation._v_attrs.q_values
+                nq = param.correlation._v_attrs.q_values
             else:
-                nq = len(H5.param.correlation._v_attrs.q_values)
+                nq = len(param.correlation._v_attrs.q_values)
             # number of particles
-            npart = H5.param.mdsim._v_attrs.particles
+            npart = param.mdsim._v_attrs.particles
+            if not isscalar(npart):
+                raise SystemExit('Don\'t know how to handle mixture, npart is not a scalar (FIXME)')
+
             # merge block levels, discarding time zero
             sisf = H5._v_children['SISF'][:, :, 1:, :]
             sisf.shape = nq, -1, sisf.shape[-1]
@@ -84,7 +91,7 @@ def plot(args):
                     raise SystemExit('empty plot range')
 
                 if args.label:
-                    attrs = mdplot.label.attributes(H5.param)
+                    attrs = mdplot.label.attributes(param)
                     attrs['q'] = r'%.2f' % q
                     label = args.label[i % len(args.label)] % attrs
                 elif args.legend or not args.small:
@@ -138,6 +145,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('chi4', help='four-point susceptibility')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
+    parser.add_argument('--flavour', help='flavour of correlation functions, selects subgroup in HDF5 file')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')

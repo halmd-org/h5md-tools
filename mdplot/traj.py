@@ -42,6 +42,11 @@ def plot(args):
     H5 = f.root
 
     try:
+        if args.flavour:
+            trajectory = H5.trajectory._v_children[args.flavour]
+        else:
+            trajectory = H5.trajectory
+
         # periodic simulation box length
         box = H5.param.mdsim._v_attrs.box_length
         # positional coordinates dimension
@@ -82,7 +87,7 @@ def plot(args):
         s = slice(args.start, args.count and (args.start + args.stride * args.count) or None, args.stride)
 
         sys.stdout.write('plot: %6sf' % '')
-        for (i, (r, t)) in enumerate(zip(H5.trajectory.r[s], H5.trajectory.t[s])):
+        for (i, (r, t)) in enumerate(zip(trajectory.r[s], H5.trajectory.t[s])):
             # enforce periodic boundary conditions
             r[:] = r[:] - numpy.floor(r[:] / box) * box
 
@@ -124,8 +129,8 @@ def plot(args):
             sys.stdout.write('%6df' % (i + 1))
             sys.stdout.flush()
 
-    except tables.exceptions.NoSuchNodeError:
-        raise SystemExit('missing simulation data in file: %s' % args.input)
+    except tables.exceptions.NoSuchNodeError as what:
+        raise SystemExit(str(what) + '\nmissing simulation data in file: %s' % args.input)
 
     finally:
         f.close()
@@ -159,6 +164,7 @@ def color_wheel(x):
 def add_parser(subparsers):
     parser = subparsers.add_parser('traj', help='trajectory projections on a 2-dimensional plane')
     parser.add_argument('input', metavar='INPUT', help='HDF5 trajectory file')
+    parser.add_argument('--flavour', help='particle flavour')
     parser.add_argument('--start', type=int, help='phase space sample offset')
     parser.add_argument('--count', type=int, help='phase space sample count')
     parser.add_argument('--stride', type=int, help='phase space sample stride')

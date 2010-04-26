@@ -46,8 +46,12 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f.root
-        dimension = H5.param.mdsim._v_attrs.dimension
+        param = H5.param
+        dimension = param.mdsim._v_attrs.dimension
         try:
+            if args.flavour:
+                H5 = H5._v_children[args.flavour]
+
             msd = H5._v_children['MSD']
             mqd = H5._v_children['MQD']
             # discard time zero
@@ -73,12 +77,12 @@ def plot(args):
                 x, y = x[time_order], y[time_order]
 
             if args.label:
-                label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
+                label = args.label[i % len(args.label)] % mdplot.label.attributes(param)
             elif args.legend or not args.small:
                 basen = os.path.splitext(os.path.basename(fn))[0]
                 label = basen.replace('_', r'\_')
             if args.title:
-                title = args.title % mdplot.label.attributes(H5.param)
+                title = args.title % mdplot.label.attributes(param)
 
         except tables.exceptions.NoSuchNodeError:
             raise SystemExit('missing simulation data in file: %s' % fn)
@@ -150,6 +154,7 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('ngauss', help='non-Gaussian parameter')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlation file')
     parser.add_argument('--type', choices=['NGAUSS', 'BURNETT'], help='correlation function')
+    parser.add_argument('--flavour', help='flavour of correlation functions, selects subgroup in HDF5 file')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')

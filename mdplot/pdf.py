@@ -53,7 +53,10 @@ def plot(args):
         try:
             try:
                 # particle positions of phase space sample
-                r = H5.trajectory.r[args.sample]
+                if args.flavour:
+                    r = H5.trajectory._v_children[args.flavour].r[args.sample]
+                else:
+                    r = H5.trajectory.r[args.sample]
                 # simulation time
                 time = H5.trajectory.t[args.sample]
             except IndexError:
@@ -63,6 +66,8 @@ def plot(args):
             box = H5.param.mdsim._v_attrs.box_length
             # number of particles
             N = H5.param.mdsim._v_attrs.particles
+            if not isscalar(N):
+                raise SystemExit('Don\'t know how to handle mixture, N is not a scalar (FIXME)')
             # positional coordinates dimension
             dim = H5.param.mdsim._v_attrs.dimension
             # particle density
@@ -89,8 +94,8 @@ def plot(args):
                 basen = os.path.splitext(os.path.basename(fn))[0]
                 label = basen.replace('_', r'\_')
 
-        except tables.exceptions.NoSuchNodeError:
-            raise SystemExit('missing simulation data in file: %s' % fn)
+        except tables.exceptions.NoSuchNodeError as what:
+            raise SystemExit(str(what) + '\nmissing simulation data in file: %s' % fn)
 
         finally:
             f.close()
@@ -125,6 +130,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('pdf', help='pair distribution function')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 trajectory file')
+    parser.add_argument('--flavour', help='particle flavour')
     parser.add_argument('--sample', type=int, help='phase space sample number')
     parser.add_argument('--bins', type=int, help='number of histogram bins')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')

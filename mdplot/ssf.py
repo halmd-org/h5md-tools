@@ -43,20 +43,26 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f.root
+        param = H5.param
         try:
+            if args.flavour:
+                trajectory = H5.trajectory._v_children[args.flavour]
+            else:
+                trajectory = H5.trajectory
+
             # periodically extended particle positions
-            r = H5.trajectory.r[args.sample]
+            r = trajectory.r[args.sample]
             # periodic simulation box length
-            L = H5.param.mdsim._v_attrs.box_length
+            L = param.mdsim._v_attrs.box_length
             # number of particles
-            N = sum(H5.param.mdsim._v_attrs.particles)
+            N = sum(param.mdsim._v_attrs.particles)
             # positional coordinates dimension
-            dim = H5.param.mdsim._v_attrs.dimension
+            dim = param.mdsim._v_attrs.dimension
 
         except IndexError:
             raise SystemExit('invalid phase space sample offset')
-        except tables.exceptions.NoSuchNodeError:
-            raise SystemExit('missing simulation data in file: %s' % fn)
+        except tables.exceptions.NoSuchNodeError as what:
+            raise SystemExit(str(what) + '\nmissing simulation data in file: %s' % fn)
         finally:
             f.close()
 
@@ -88,14 +94,14 @@ def plot(args):
             S_q[i] = mean((pow(sum(cos(q_r), axis=1), 2) + pow(sum(sin(q_r), axis=1), 2)) / len(r))
 
         if args.label:
-            label = args.label[i % len(args.label)] % mdplot.label.attributes(H5.param)
+            label = args.label[i % len(args.label)] % mdplot.label.attributes(param)
 
         elif args.legend or not args.small:
             basename = os.path.splitext(os.path.basename(fn))[0]
             label = r'%s' % basename.replace('_', r'\_')
 
         if args.title:
-            title = args.title % mdplot.label.attributes(H5.param)
+            title = args.title % mdplot.label.attributes(param)
 
         ax.plot(q_range, S_q, label=label)
 
@@ -115,6 +121,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('ssf', help='static structure factor')
     parser.add_argument('input', nargs='+', metavar='INPUT', help='HDF5 trajectory file')
+    parser.add_argument('--flavour', help='particle flavour')
     parser.add_argument('--sample', type=int, help='phase space sample offset')
     parser.add_argument('--q-limit', type=float, help='maximum value of |q|')
     parser.add_argument('--q-error', type=float, help='relative deviation of |q|')
