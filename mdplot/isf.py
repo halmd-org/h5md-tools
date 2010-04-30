@@ -54,6 +54,8 @@ def plot(args):
             # number of q-values
             if version < 'v0.2.5.2-2-g92f02d5':
                 nq = param.correlation._v_attrs.q_values
+                if not isscalar(nq):
+                    nq = len(nq)
             else:
                 nq = len(param.correlation._v_attrs.q_values)
             # merge block levels, discarding time zero
