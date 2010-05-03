@@ -54,12 +54,19 @@ def plot(args):
             # number of q-values
             if version < 'v0.2.5.2-2-g92f02d5':
                 nq = param.correlation._v_attrs.q_values
+                if not isscalar(nq):
+                    nq = len(nq)
             else:
                 nq = len(param.correlation._v_attrs.q_values)
             # number of particles
             npart = param.mdsim._v_attrs.particles
             if not isscalar(npart):
-                raise SystemExit('Don\'t know how to handle mixture, npart is not a scalar (FIXME)')
+                if args.flavour == 'AA':
+                    npart = npart[0]
+                elif args.flavour == 'BB':
+                    npart = npart[1]
+                else:
+                    raise SystemExit('Don\'t know how to handle mixture, npart is not a scalar (FIXME)')
 
             # merge block levels, discarding time zero
             sisf = H5._v_children['SISF'][:, :, 1:, :]
