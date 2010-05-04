@@ -1,4 +1,7 @@
 #include <Python.h>
+
+#define PY_ARRAY_UNIQUE_SYMBOL Py_Array_API_mdplot_ext
+#define NO_IMPORT_ARRAY
 #include <numpy/ndarrayobject.h>
 
 // forward declaration

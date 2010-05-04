@@ -1,4 +1,6 @@
 #include <Python.h>
+
+#define PY_ARRAY_UNIQUE_SYMBOL Py_Array_API_mdplot_ext
 #include <numpy/ndarrayobject.h>
 
 PyObject * _static_structure_factor(PyObject *self, PyObject *args);
