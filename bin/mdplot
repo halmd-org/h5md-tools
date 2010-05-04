@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 # mdplot - Molecular Dynamics simulation plotter
 #
-# Copyright (C) 2008  Peter Colberg <peter.colberg@physik.uni-muenchen.de>
+# Copyright © 2008-2010  Peter Colberg, Felix Höfling
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
