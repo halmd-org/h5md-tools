@@ -62,12 +62,7 @@ def plot(args):
             # number of particles
             npart = param.mdsim._v_attrs.particles
             if not isscalar(npart):
-                if args.flavour == 'AA':
-                    npart = npart[0]
-                elif args.flavour == 'BB':
-                    npart = npart[1]
-                else:
-                    raise SystemExit('Don\'t know how to handle mixture, npart is not a scalar (FIXME)')
+                npart = npart[ord(args.flavour[:1]) - ord('A')]
 
             # merge block levels, discarding time zero
             sisf = H5._v_children['SISF'][:, :, 1:, :]
