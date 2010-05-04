@@ -67,7 +67,13 @@ def plot(args):
             # number of particles
             N = H5.param.mdsim._v_attrs.particles
             if not isscalar(N):
-                raise SystemExit('Don\'t know how to handle mixture, N is not a scalar (FIXME)')
+                if args.flavour == 'A':
+                    N = N[0]
+                elif args.flavour == 'B':
+                    N = N[1]
+                else:
+                    raise SystemExit('Don\'t know how to handle mixture, npart is not a scalar (FIXME)')
+
             # positional coordinates dimension
             dim = H5.param.mdsim._v_attrs.dimension
             # particle density

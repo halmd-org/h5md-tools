@@ -24,6 +24,7 @@ from numpy import *
 import sys
 import tables
 import mdplot.label
+import ssf
 
 """
 Plot static structure factor
