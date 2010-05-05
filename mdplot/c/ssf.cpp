@@ -23,6 +23,7 @@
 #define PY_ARRAY_UNIQUE_SYMBOL Py_Array_API_mdplot_ext
 #define NO_IMPORT_ARRAY
 #include <numpy/ndarrayobject.h>
+#include <vector>
 
 // forward declaration
 bool is_double_matrix(PyArrayObject *a);
@@ -47,23 +48,27 @@ PyObject *_static_structure_factor(PyObject *self, PyObject *args)
     unsigned nq = PyArray_DIM(q, 0);
     unsigned npart = PyArray_DIM(r, 0);
 
-    // loop over wavevectors
-    double result = 0;
-    for (unsigned i=0; i < nq; i++) {
-        // loop over particles
-        double sin_sum = 0;
-        double cos_sum = 0;
-        for (unsigned j=0; j < npart; j++) {
-            // q_r = inner(q, r)
+    // accumulate sin(q·r) and cos(q·r) for each q vector separately
+    std::vector<double> sin_sum(nq, 0.);
+    std::vector<double> cos_sum(nq, 0.);
+
+    // loop over particles
+    for (unsigned i=0; i < npart; i++) {
+        // loop over wavevectors
+        for (unsigned j=0; j < nq; j++) {
             double q_r = 0;
             for (unsigned k=0; k < dimension; k++) {
-                q_r += *(double*)PyArray_GETPTR2(q, i, k) * *(double*)PyArray_GETPTR2(r, j, k);
+                q_r += *(double*)PyArray_GETPTR2(q, j, k) * *(double*)PyArray_GETPTR2(r, i, k);
             }
             // on old platforms/compilers one may prefer sincos(q_r, &s, &c)
-            sin_sum += sinf(q_r);  // single precision should be sufficient here
-            cos_sum += cosf(q_r);
+            sin_sum[j] += sinf(q_r);  // single precision should be sufficient here
+            cos_sum[j] += cosf(q_r);
         }
-        result +=  sin_sum * sin_sum + cos_sum * cos_sum;
+    }
+    // collect results
+    double result = 0;
+    for (unsigned j=0; j < nq; j++) {
+        result +=  sin_sum[j] * sin_sum[j] + cos_sum[j] * cos_sum[j];
     }
     result /= nq * npart;
 
