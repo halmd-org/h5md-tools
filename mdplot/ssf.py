@@ -26,6 +26,8 @@ import sys
 import tables
 import mdplot.label
 import ssf
+from mdplot.ext import _static_structure_factor
+import time
 
 """
 Plot static structure factor
@@ -84,6 +86,7 @@ def plot(args):
         q_range = q_min * arange(1, nq + 1)
 
         # compute static structure factor over |q| range
+        pway, cway = 0., 0.
         S_q = zeros(nq)
         for i, q_val in enumerate(q_range):
             # choose q vectors on surface of Ewald's sphere
@@ -91,9 +94,18 @@ def plot(args):
             if args.verbose:
                 print '|q| = %.2f\t%4d vectors' % (q_val, len(q))
             # compute scalar products for between q vectors and particle positions
+            timer1 = time.time()
             q_r = inner(q, r)
             # average static structure factor over q vectors
             S_q[i] = mean((pow(sum(cos(q_r), axis=1), 2) + pow(sum(sin(q_r), axis=1), 2)) / len(r))
+            timer2 = time.time()
+            x = _static_structure_factor(q, r)
+            timer3 = time.time()
+            if abs(S_q[i] - x) > 1e-6:
+                print 'Warning:', S_q[i], x
+            pway += timer2-timer1
+            cway += timer3-timer2
+        print 'The Python way: %f, the C way: %f' % (pway, cway)
 
         if args.label:
             label = args.label[i % len(args.label)] % mdplot.label.attributes(param)
