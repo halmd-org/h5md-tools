@@ -19,7 +19,7 @@ incdir = os.path.expanduser('~/usr/lib/python2.6/site-packages/numpy-1.4.0-py2.6
 module1 = Extension('mdplot.ext',
                      sources = ['mdplot/c/ext.cpp', 'mdplot/c/ssf.cpp'],
                      include_dirs = [incdir],
-                     extra_compile_args = ['-O3', '-mtune=native', '-Wall'])
+                     extra_compile_args = ['-O3', '-mtune=native', '-ffast-math', '-ftree-vectorizer-verbose=2', '-Wall'])
 
 setup(name = 'mdplot',
       version = parse_git_version(),

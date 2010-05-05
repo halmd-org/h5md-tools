@@ -47,17 +47,23 @@ PyObject *_static_structure_factor(PyObject *self, PyObject *args)
     unsigned nq = PyArray_DIM(q, 0);
     unsigned npart = PyArray_DIM(r, 0);
 
+    double* q_data = (double*)PyArray_DATA(q);
+    double* r_data = (double*)PyArray_DATA(r);
+
     // loop over wavevectors
     double result = 0;
     for (unsigned i=0; i < nq; i++) {
         // loop over particles
         double sin_sum = 0;
         double cos_sum = 0;
+        double* qi = q_data + i * dimension;
         for (unsigned j=0; j < npart; j++) {
             // q_r = inner(q, r)
             double q_r = 0;
+            double* rj = r_data + j * dimension;
             for (unsigned k=0; k < dimension; k++) {
-                q_r += *(double*)PyArray_GETPTR2(q, i, k) * *(double*)PyArray_GETPTR2(r, j, k);
+                q_r += qi[k] * rj[k];
+//                q_r += *(double*)PyArray_GETPTR2(q, i, k) * *(double*)PyArray_GETPTR2(r, j, k);
             }
             // on old platforms/compilers one may prefer sincos(q_r, &s, &c)
             sin_sum += sinf(q_r);  // single precision should be sufficient here
