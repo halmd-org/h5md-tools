@@ -22,7 +22,7 @@
 import os, os.path
 from matplotlib import ticker
 from numpy import *
-import sys
+from re import split
 import tables
 import mdplot.label
 import ssf
@@ -54,7 +54,12 @@ def plot(args):
                 trajectory = H5.trajectory
 
             # periodically extended particle positions
-            r = trajectory.r[args.sample]
+            # possibly read several samples
+            idx = [int(x) for x in split(':', args.sample)]
+            if len(idx) == 1 :
+                samples = array([trajectory.r[idx[0]]])
+            elif len(idx) == 2:
+                samples = trajectory.r[idx[0]:idx[1]]
             # periodic simulation box length
             L = param.mdsim._v_attrs.box_length
             # number of particles
@@ -86,13 +91,15 @@ def plot(args):
 
         # compute static structure factor over |q| range
         S_q = zeros(nq)
-        for i, q_val in enumerate(q_range):
+        for j, q_val in enumerate(q_range):
             # choose q vectors on surface of Ewald's sphere
             q = q_grid[where(abs(q_norm - q_val) < q_err)]
             if args.verbose:
                 print '|q| = %.2f\t%4d vectors' % (q_val, len(q))
             # average static structure factor over q vectors
-            S_q[i] = _static_structure_factor(q, r)
+            for r in samples:
+                S_q[j] += _static_structure_factor(q, r)
+        S_q /= samples.shape[0]
 
         if args.label:
             label = args.label[i % len(args.label)] % mdplot.label.attributes(param)
@@ -104,7 +111,9 @@ def plot(args):
         if args.title:
             title = args.title % mdplot.label.attributes(param)
 
-        ax.plot(q_range, S_q, label=label)
+        c = args.colors[i % len(args.colors)]
+        ax.plot(q_range, S_q, '-', color=c, label=label)
+        ax.plot(q_range, S_q, 'o', markerfacecolor=c, markeredgecolor=c, markersize=2)
 
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
@@ -123,9 +132,9 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('ssf', help='static structure factor')
     parser.add_argument('input', nargs='+', metavar='INPUT', help='HDF5 trajectory file')
     parser.add_argument('--flavour', help='particle flavour')
-    parser.add_argument('--sample', type=int, help='phase space sample offset')
+    parser.add_argument('--sample', help='index of phase space sample(s)')
     parser.add_argument('--q-limit', type=float, help='maximum value of |q|')
     parser.add_argument('--q-error', type=float, help='relative deviation of |q|')
     parser.add_argument('--verbose', action='store_true')
-    parser.set_defaults(sample=0, q_limit=25, q_error=0.1)
+    parser.set_defaults(sample='0', q_limit=25, q_error=0.1)
 
