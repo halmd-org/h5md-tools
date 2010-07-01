@@ -61,6 +61,7 @@ def plot(args):
 
             H5 = f.root
             param = H5.param
+            dim = H5.param.mdsim._v_attrs.dimension
             try:
                 if args.flavour:
                     H5 = H5._v_children[args.flavour]
@@ -90,7 +91,7 @@ def plot(args):
                         # calculate diffusion constant from central difference of MSD
                         h = data[:, 1:, 0] - data[:, :-1, 0]
                         x = (data[:, 1:, 0] + data[:, :-1, 0]) / 2
-                        y = diff(data[:, :, 1], axis=1, n=1) / (6 * h)
+                        y = diff(data[:, :, 1], axis=1, n=1) / (2 * dim * h)
                         x, x0 = reshape(x[:, 1:], (-1, )), x[0, 0]
                         y, y0 = reshape(y[:, 1:], (-1, )), y[0, 0]
 
@@ -242,7 +243,7 @@ def plot(args):
     ylabel = {
         'MSD': r'$\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
         'MQD': r'$\langle\delta r(t^*)^4\rangle\sigma^{-4}$',
-        'DIFFMSD': r'$\frac{1}{6}\frac{d}{dt}\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
+        'DIFFMSD': r'$\frac{1}{%d}\frac{d}{dt}\langle\delta r(t^*)^2\rangle\sigma^{-2}$' % (2 * dim),
         'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle\delta r(t^*)^2\rangle$',
         'VAC': r'$\langle v(t^*)v(0)\rangle$',
         'STRESS': r'$\eta(t)=\left\langle \Pi^{\alpha\beta}_0(t) \Pi^{\alpha\beta}_0(0)\right\rangle$',
