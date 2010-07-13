@@ -49,10 +49,13 @@ PyObject *_static_structure_factor(PyObject *self, PyObject *args)
 
     // loop over wavevectors
     double result = 0;
+// #   pragma omp parallel
+    {
     for (unsigned i=0; i < nq; i++) {
-        // loop over particles
         double sin_sum = 0;
         double cos_sum = 0;
+        // loop over particles
+#       pragma omp parallel for reduction(+:sin_sum,cos_sum)
         for (unsigned j=0; j < npart; j++) {
             // q_r = inner(q, r)
             double q_r = 0;
@@ -63,7 +66,11 @@ PyObject *_static_structure_factor(PyObject *self, PyObject *args)
             sin_sum += sinf(q_r);  // single precision should be sufficient here
             cos_sum += cosf(q_r);
         }
+// #       pragma omp master
+        {
         result +=  sin_sum * sin_sum + cos_sum * cos_sum;
+        }
+    }
     }
     result /= nq * npart;
 
