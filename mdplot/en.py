@@ -201,6 +201,7 @@ def plot(args):
 #                        % (ylabel[dset][1], y_mean, y_std),
 #                    transform = ax.transAxes, verticalalignment='center',
 #                    horizontalalignment='left')
+            print '%.3g ± %.3g' % (y_mean, y_std)
 
     major_formatter = ticker.ScalarFormatter()
     major_formatter.set_powerlimits((-1, 2))
