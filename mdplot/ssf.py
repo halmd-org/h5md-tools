@@ -122,6 +122,12 @@ def plot(args):
         l = ax.legend(loc=args.legend)
         l.legendPatch.set_alpha(0.7)
 
+    ax.axis('tight')
+    if args.xlim:
+        plt.setp(ax, xlim=args.xlim)
+    if args.ylim:
+        plt.setp(ax, ylim=args.ylim)
+
     plt.xlabel(args.xlabel or r'$\lvert\textbf{q}\rvert\sigma$')
     plt.ylabel(args.ylabel or r'$S(\lvert\textbf{q}\rvert)$')
 
@@ -138,6 +144,8 @@ def add_parser(subparsers):
     parser.add_argument('--sample', help='index of phase space sample(s)')
     parser.add_argument('--q-limit', type=float, help='maximum value of |q|')
     parser.add_argument('--q-error', type=float, help='relative deviation of |q|')
+    parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
+    parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--verbose', action='store_true')
     parser.set_defaults(sample='0', q_limit=25, q_error=0.1)
 
