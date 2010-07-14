@@ -67,6 +67,9 @@ def plot(args):
             # positional coordinates dimension
             dim = param.mdsim._v_attrs.dimension
 
+            # store attributes for later use before closing the file
+            attrs = mdplot.label.attributes(param)
+
         except IndexError:
             raise SystemExit('invalid phase space sample offset')
         except tables.exceptions.NoSuchNodeError as what:
@@ -102,14 +105,14 @@ def plot(args):
         S_q /= samples.shape[0]
 
         if args.label:
-            label = args.label[i % len(args.label)] % mdplot.label.attributes(param)
+            label = args.label[i % len(args.label)] % attrs
 
         elif args.legend or not args.small:
             basename = os.path.splitext(os.path.basename(fn))[0]
             label = r'%s' % basename.replace('_', r'\_')
 
         if args.title:
-            title = args.title % mdplot.label.attributes(param)
+            title = args.title % attrs
 
         c = args.colors[i % len(args.colors)]
         ax.plot(q_range, S_q, '-', color=c, label=label)
