@@ -21,7 +21,6 @@
 
 import os, os.path
 from numpy import *
-from scipy.special import gamma
 import mdplot.label
 import sys
 import tables
@@ -54,12 +53,17 @@ def plot(args):
         try:
             try:
                 # particle positions of phase space sample
+                # possibly read several samples
                 if args.flavour:
-                    r = H5.trajectory._v_children[args.flavour].r[args.sample]
+                    trajectory = H5.trajectory._v_children[args.flavour]
                 else:
-                    r = H5.trajectory.r[args.sample]
-                # simulation time
-                time = H5.trajectory.t[args.sample]
+                    trajectory = H5.trajectory
+
+                idx = [int(x) for x in args.sample.split(':')]
+                if len(idx) == 1 :
+                    samples = array([trajectory.r[idx[0]]])
+                elif len(idx) == 2:
+                    samples = trajectory.r[idx[0]:idx[1]]
             except IndexError:
                 raise SystemExit('out-of-bounds phase space sample number')
 
@@ -77,11 +81,11 @@ def plot(args):
 
             cutoff = args.xlim or (0, box)
             # minimum image distances
-            x = r[:, args.axis]
+            x = samples[..., args.axis]
             x = x - floor(x / box) * box
-            histo, bins = histogram(x, bins=args.bins, range=cutoff, new=True)
+            histo, bins = histogram(x.flatten(), bins=args.bins, range=cutoff, new=True)
             # normalisation
-            histo = array(histo, dtype=float64) / diff(bins) / N
+            histo = array(histo, dtype=float64) / diff(bins) / prod(samples.shape[0:2])
 
             if args.label:
                 label = args.label[k % len(args.label)] % mdplot.label.attributes(H5.param)
@@ -105,8 +109,8 @@ def plot(args):
     else:
         plot.setp(ax, ylim=(0, 1.3 * max(histo)))
 
-    plot.setp(ax, xlabel=args.xlabel or r'$r / \sigma$')
-    plot.setp(ax, ylabel=args.ylabel or r'density profile $n(r)$')
+    plot.setp(ax, xlabel=args.xlabel or r'$x / \sigma$')
+    plot.setp(ax, ylabel=args.ylabel or r'density profile $n(x)$')
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
         l.legendPatch.set_alpha(0.7)
@@ -121,7 +125,7 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('profile', help='density profile')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 trajectory file')
     parser.add_argument('--flavour', help='particle flavour')
-    parser.add_argument('--sample', type=int, help='phase space sample number')
+    parser.add_argument('--sample', help='index or range of phase space samples')
     parser.add_argument('--axis', type=int, help='profile axis')
     parser.add_argument('--bins', type=int, help='number of histogram bins')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
