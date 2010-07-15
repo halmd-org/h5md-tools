@@ -140,25 +140,16 @@ def plot(args):
             finally:
                 f.close()
 
-            # rescale time by sigma/(mean velocity)
-            if args.rescale_time:
-                # calculate temperature from tep-file
-                try:
-                    fn_tep = '%s.tep' % os.path.splitext(fn)[0]
-                    f = tables.openFile(fn_tep, mode='r')
-                    temp = mean(f.root.TEMP[:, 1])
+            # cutoff data
+            if args.cutoff_time and len(args.cutoff_time) > i:
+                idx = where(x < args.cutoff_time[i])
+                x, y = x[idx], y[idx]
+                if locals().has_key('yerr'):
+                    yerr = yerr[idx]
 
-                except IOError:
-                    raise SystemExit('Failed to open HD5 file: %s' % fn_tep)
-
-                except tables.exceptions.NoSuchNodeError:
-                    raise SystemExit('missing temperature data in file: %s' % fn_tep)
-
-                finally:
-                    f.close()
-
-                print fn, temp
-                x *= sqrt(3*temp)
+            # rescale time by given factor
+            if args.rescale_time and len(args.rescale_time) > i:
+               x *= args.rescale_time[i]
 
             _y = y
             if args.axes in ('ylog', 'loglog'):
@@ -176,8 +167,8 @@ def plot(args):
                     ax.plot(xi, yi, marker=(',', '3')[i % 2], color=c, lw=0.2, ms=3)
 
             elif dset in ('DIFF2MSD', 'DIFF2HELFAND'):
-                ax.plot(x[_y > 0], y[_y > 0], '+', markeredgecolor=c, markerfacecolor='none', markersize=5, label=label)
-                ax.plot(x[_y < 0], y[_y < 0], 'o', markeredgecolor=c, markerfacecolor='none', markersize=5)
+                ax.plot(x[_y > 0], y[_y > 0], '+', markeredgecolor=c, markerfacecolor='none', markersize=3, label=label)
+                ax.plot(x[_y < 0], y[_y < 0], 'o', markeredgecolor=c, markerfacecolor='none', markersize=3)
                 if args.power_inset:
                     py = y * pow(x, -args.power_inset)
                     inset.plot(x, py, 'o', markeredgecolor=c, markerfacecolor='none', markersize=3)
@@ -269,7 +260,8 @@ def add_parser(subparsers):
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--unordered', action='store_true', help='disable block time ordering')
     parser.add_argument('--normalize', action='store_true', help='normalize function')
-    parser.add_argument('--rescale-time', action='store_true', help='rescale time by 1/sqrt(3*temp)')
+    parser.add_argument('--rescale-time', type=float, nargs='+', help='rescale time by given list of factors')
+    parser.add_argument('--cutoff-time', type=float, nargs='+', help='cutoff data for times larger than in supplied list')
     parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s)')
     parser.add_argument('--power-inset', type=float, help='plot power law inset')
     parser.add_argument('--inset-xlim', metavar='VALUE', type=float, nargs=2, help='limit inset x-axis to given range')
