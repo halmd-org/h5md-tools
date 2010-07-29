@@ -118,6 +118,23 @@ def plot(args):
         ax.plot(q_range, S_q, '-', color=c, label=label)
         ax.plot(q_range, S_q, 'o', markerfacecolor=c, markeredgecolor=c, markersize=2)
 
+    # optionally plot power laws
+    if args.power_law:
+        p = reshape(args.power_law, (-1, 4))
+        for (pow_exp, pow_coeff, pow_xmin, pow_xmax) in p:
+            px = logspace(log10(pow_xmin), log10(pow_xmax), num=100)
+            py = pow_coeff * pow(px, pow_exp)
+            ax.plot(px, py, 'k--')
+
+    # optionally plot with logarithmic scale(s)
+    if args.axes == 'xlog':
+        ax.set_xscale('log')
+    if args.axes == 'ylog':
+        ax.set_yscale('log')
+    if args.axes == 'loglog':
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
         l.legendPatch.set_alpha(0.7)
@@ -146,6 +163,8 @@ def add_parser(subparsers):
     parser.add_argument('--q-error', type=float, help='relative deviation of |q|')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
+    parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
+    parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s)')
     parser.add_argument('--verbose', action='store_true')
     parser.set_defaults(sample='0', q_limit=25, q_error=0.1)
 
