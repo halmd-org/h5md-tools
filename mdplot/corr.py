@@ -234,7 +234,7 @@ def plot(args):
     ylabel = {
         'MSD': r'$\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
         'MQD': r'$\langle\delta r(t^*)^4\rangle\sigma^{-4}$',
-        'DIFFMSD': r'$\frac{1}{%d}\frac{d}{dt}\langle\delta r(t^*)^2\rangle\sigma^{-2}$' % (2 * dim),
+        'DIFFMSD': r'$\frac{1}{2 d}\frac{d}{dt}\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
         'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle\delta r(t^*)^2\rangle$',
         'VAC': r'$\langle v(t^*)v(0)\rangle$',
         'STRESS': r'$\eta(t)=\left\langle \Pi^{\alpha\beta}_0(t) \Pi^{\alpha\beta}_0(0)\right\rangle$',
