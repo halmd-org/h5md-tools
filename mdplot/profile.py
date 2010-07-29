@@ -84,8 +84,9 @@ def plot(args):
             x = samples[..., args.axis]
             x = x - floor(x / box) * box
             histo, bins = histogram(x.flatten(), bins=args.bins, range=cutoff, new=True)
-            # normalisation
-            histo = array(histo, dtype=float64) / diff(bins) / prod(samples.shape[0:2])
+            # normalisation with volume of slabs (=bins) and number of samples,
+            # the result is a local number density
+            histo = array(histo, dtype=float64) / (diff(bins) * pow(box, dim-1)) / samples.shape[0]
 
             if args.label:
                 label = args.label[k % len(args.label)] % mdplot.label.attributes(H5.param)
@@ -131,7 +132,7 @@ def add_parser(subparsers):
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.set_defaults(
-        sample=-1,
+        sample='-1',
         axis=2,
         bins=50,
         )
