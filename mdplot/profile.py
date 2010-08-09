@@ -101,6 +101,11 @@ def plot(args):
             f.close()
 
         ax.plot(bins[:-1], histo, marker='.', label=label)
+        if args.dump:
+            f = open(args.dump, 'a')
+            print >>f, '# %s' % label.replace(r'\_', '_')
+            savetxt(f, array((bins[:-1], histo)).T)
+            print >>f, '\n'
 
     ax.axis('tight')
     if args.xlim:

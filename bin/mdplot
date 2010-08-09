@@ -61,7 +61,8 @@ plots = dict([(m, sys.modules['mdplot.%s' % m]) for m in mdplot.__all__])
 
 def parse_args():
     parser = argparse.ArgumentParser(prog='mdplot')
-    parser.add_argument('--output', help='output filename')
+    parser.add_argument('--output', metavar='FILE', help='output filename')
+    parser.add_argument('--dump', metavar='FILE', help='dump data to file')
     parser.add_argument('--a4', action="store_true", help='DIN A4 format')
     parser.add_argument('--small', action="store_true", help='small figure size')
     parser.add_argument('--dpi', type=float, help='resolution in dots per inch')

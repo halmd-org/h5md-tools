@@ -117,6 +117,11 @@ def plot(args):
         c = args.colors[i % len(args.colors)]
         ax.plot(q_range, S_q, '-', color=c, label=label)
         ax.plot(q_range, S_q, 'o', markerfacecolor=c, markeredgecolor=c, markersize=2)
+        if args.dump:
+            f = open(args.dump, 'a')
+            print >>f, '# %s' % label.replace(r'\_', '_')
+            savetxt(f, array((q_range, S_q)).T)
+            print >>f, '\n'
 
     # optionally plot power laws
     if args.power_law:
