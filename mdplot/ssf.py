@@ -28,11 +28,17 @@ import mdplot.label
 import ssf
 from mdplot.ext import _static_structure_factor
 
+import pycuda.autoinit
+import pycuda.driver as cuda
+
 """
-Plot static structure factor
+Compute and plot static structure factor
 """
 def plot(args):
     from matplotlib import pyplot as plt
+
+    if args.cuda:
+        make_cuda_kernels()
 
     ax = plt.axes()
     label = None
@@ -93,7 +99,11 @@ def plot(args):
         q_range = q_min * arange(1, nq + 1)
 
         # compute static structure factor over |q| range
+        from time import time
         S_q = zeros(nq)
+        S_q2 = zeros(nq)
+        timer_host = 0
+        timer_gpu = 0
         for j, q_val in enumerate(q_range):
             # choose q vectors on surface of Ewald's sphere
             q = q_grid[where(abs(q_norm - q_val) < q_err)]
@@ -101,7 +111,23 @@ def plot(args):
                 print '|q| = %.2f\t%4d vectors' % (q_val, len(q))
             # average static structure factor over q vectors
             for r in samples:
-                S_q[j] += _static_structure_factor(q, r)
+                if args.cuda:
+                    t1 = time()
+                    S_q[j] += ssf_cuda(q, r, args.block_size)
+                    t2 = time()
+                    S_q2[j] += _static_structure_factor(q, r)
+                    t3 = time()
+                    timer_gpu += t2 - t1
+                    timer_host += t3 - t2
+                else:
+                    S_q[j] += _static_structure_factor(q, r)
+        diff = abs(S_q - S_q2) / S_q
+        idx = where(diff > 1e-6)
+        print diff[idx], '@', q_range[idx]
+        print 'GPU  execution time: %.3f s' % (timer_gpu)
+        print 'Host execution time: %.3f s' % (timer_host)
+        print 'Speedup: %.1f' % (timer_host / timer_gpu)
+
         S_q /= samples.shape[0]
 
         if args.label:
@@ -158,6 +184,84 @@ def plot(args):
     else:
         plt.savefig(args.output, dpi=args.dpi)
 
+def make_cuda_kernels():
+    from pycuda.compiler import SourceModule
+    from pycuda.reduction import ReductionKernel
+
+    mod = SourceModule("""
+    // thread ID within block
+    #define TID     threadIdx.x
+    // number of threads per block
+    #define TDIM    blockDim.x
+    // block ID within grid
+    #define BID     (blockIdx.y * gridDim.x + blockIdx.x)
+    // number of blocks within grid
+    #define BDIM    (gridDim.y * gridDim.x)
+    // thread ID within grid
+    #define GTID    (BID * TDIM + TID)
+    // number of threads per grid
+    #define GTDIM   (BDIM * TDIM)
+
+    // compute exp(i q·r) for a single particle
+    __global__ void compute_ssf(float *sin_, float *cos_, float *q, float *r,
+                                int offset, int npart, int dim)
+    {
+        const int i = GTID;
+        if (i >= npart)
+            return;
+
+        float q_r = 0;
+        for (int k=0; k < dim; k++) {
+            q_r += q[k + offset * dim] * r[i + k * npart];
+        }
+        sin_[i] = sin(q_r);
+        cos_[i] = cos(q_r);
+    }
+    """)
+    global compute_ssf, sum_kernel
+
+    compute_ssf = mod.get_function("compute_ssf")
+#    compute_ssf.prepare("PPPPiii", block=(args.block_size, 1, 1))
+
+    sum_kernel = ReductionKernel(float32, neutral="0",
+                                 reduce_expr="a+b", map_expr="a[i]",
+                                 arguments="float *a")
+
+def ssf_cuda(q, r, block_size=64):
+    from pycuda.gpuarray import GPUArray, to_gpu, zeros, take
+
+    nq, dim = q.shape
+    npart = r.shape[0]
+
+    # CUDA execution dimensions
+    block = (block_size, 1, 1)
+    grid = (int(ceil(float(npart) / prod(block))), 1)
+
+    # copy particle positions to device
+    # (x0, x1, x2, ..., xN, y0, y1, y2, ..., yN, z0, z1, z2, ..., zN)
+    gpu_r = to_gpu(r.T.flatten().astype(float32))
+
+    # allocate space for results
+    gpu_sin = zeros(npart, float32)
+    gpu_cos = zeros(npart, float32)
+
+    # loop over groups of wavevectors with (almost) equal magnitude
+    gpu_q = to_gpu(q.flatten().astype(float32))
+
+    # loop over wavevectors
+    result = 0
+    for i in range(nq):
+        gpu_sin.fill(0)
+        gpu_cos.fill(0)
+        # compute exp(iq·r) for each particle
+#       compute_ssf.prepared_call((ceil(npart/bs), 1), gpu_sin, gpu_cos, gpu_q, gpu_r, i, npart, dim)
+        compute_ssf(gpu_sin, gpu_cos, gpu_q, gpu_r,
+                    int32(i), int32(npart), int32(dim), block=block, grid=grid)
+        # sum(sin)^2 + sum(cos)^2
+        result += pow(sum_kernel(gpu_sin).get(), 2)
+        result += pow(sum_kernel(gpu_cos).get(), 2)
+    # normalize result with #wavevectors and #particles
+    return result / (nq * npart)
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('ssf', help='static structure factor')
@@ -170,6 +274,8 @@ def add_parser(subparsers):
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s)')
+    parser.add_argument('--cuda', action='store_true', help='use CUDA device to speed up the computation')
+    parser.add_argument('--block-size', type=int, help='block size to be used for CUDA calls')
     parser.add_argument('--verbose', action='store_true')
-    parser.set_defaults(sample='0', q_limit=25, q_error=0.1)
+    parser.set_defaults(sample='0', q_limit=25, q_error=0.1, block_size=64)
 
