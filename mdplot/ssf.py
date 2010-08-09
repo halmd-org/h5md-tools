@@ -202,8 +202,11 @@ def make_cuda_kernels():
     // number of threads per grid
     #define GTDIM   (BDIM * TDIM)
 
+    // store q vectors in texture
+    texture<float, 1> tex_q;
+
     // compute exp(i q·r) for a single particle
-    __global__ void compute_ssf(float *sin_, float *cos_, float *q, float *r,
+    __global__ void compute_ssf(float *sin_, float *cos_, float *r,
                                 int offset, int npart, int dim)
     {
         const int i = GTID;
@@ -212,16 +215,18 @@ def make_cuda_kernels():
 
         float q_r = 0;
         for (int k=0; k < dim; k++) {
-            q_r += q[k + offset * dim] * r[i + k * npart];
+            q_r += tex1Dfetch(tex_q, offset * dim + k) * r[i + k * npart];
         }
         sin_[i] = sin(q_r);
         cos_[i] = cos(q_r);
     }
     """)
-    global compute_ssf, sum_kernel
+    global compute_ssf, tex_q, sum_kernel
 
-    compute_ssf = mod.get_function("compute_ssf")
-#    compute_ssf.prepare("PPPPiii", block=(args.block_size, 1, 1))
+    compute_ssf = mod.get_function('compute_ssf')
+    tex_q = mod.get_texref('tex_q')
+
+#    compute_ssf.prepare("PPPPiii", block=(128, 1, 1))
 
     sum_kernel = ReductionKernel(float32, neutral="0",
                                  reduce_expr="a+b", map_expr="a[i]",
@@ -247,6 +252,7 @@ def ssf_cuda(q, r, block_size=64):
 
     # loop over groups of wavevectors with (almost) equal magnitude
     gpu_q = to_gpu(q.flatten().astype(float32))
+    gpu_q.bind_to_texref_ext(tex_q)
 
     # loop over wavevectors
     result = 0
@@ -254,10 +260,12 @@ def ssf_cuda(q, r, block_size=64):
         gpu_sin.fill(0)
         gpu_cos.fill(0)
         # compute exp(iq·r) for each particle
-#       compute_ssf.prepared_call((ceil(npart/bs), 1), gpu_sin, gpu_cos, gpu_q, gpu_r, i, npart, dim)
-        compute_ssf(gpu_sin, gpu_cos, gpu_q, gpu_r,
-                    int32(i), int32(npart), int32(dim), block=block, grid=grid)
-        # sum(sin)^2 + sum(cos)^2
+        # FIXME invoke kernel with prepared_call
+#        compute_ssf.prepared_call(grid, gpu_sin, gpu_cos, gpu_r, i, npart, dim)
+        compute_ssf(gpu_sin, gpu_cos, gpu_r,
+                    int32(i), int32(npart), int32(dim),
+                    block=block, grid=grid, texrefs=[tex_q])
+        # sum(sin(q·r))^2 + sum(cos(q·r))^2
         result += pow(sum_kernel(gpu_sin).get(), 2)
         result += pow(sum_kernel(gpu_cos).get(), 2)
     # normalize result with #wavevectors and #particles
