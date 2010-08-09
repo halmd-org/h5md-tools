@@ -29,7 +29,8 @@ setup(name = 'mdplot',
       author_email = ('peter.colberg@physik.uni-muenchen.de', 'hoefling@mf.mpg.de'),
       packages = ['mdplot'],
       scripts = ['bin/mdplot'],
-      license = 'GPL',
-      ext_modules = [module1]
+      package_data={'mdplot': ['gpu/ssf_kernel.cu']},
+      ext_modules = [module1],
+      license = 'GPL'
       )
 

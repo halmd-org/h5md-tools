@@ -188,41 +188,11 @@ def make_cuda_kernels():
     from pycuda.compiler import SourceModule
     from pycuda.reduction import ReductionKernel
 
-    mod = SourceModule("""
-    // thread ID within block
-    #define TID     threadIdx.x
-    // number of threads per block
-    #define TDIM    blockDim.x
-    // block ID within grid
-    #define BID     (blockIdx.y * gridDim.x + blockIdx.x)
-    // number of blocks within grid
-    #define BDIM    (gridDim.y * gridDim.x)
-    // thread ID within grid
-    #define GTID    (BID * TDIM + TID)
-    // number of threads per grid
-    #define GTDIM   (BDIM * TDIM)
-
-    // store q vectors in texture
-    texture<float, 1> tex_q;
-
-    // compute exp(i q·r) for a single particle
-    __global__ void compute_ssf(float *sin_, float *cos_, float *r,
-                                int offset, int npart, int dim)
-    {
-        const int i = GTID;
-        if (i >= npart)
-            return;
-
-        float q_r = 0;
-        for (int k=0; k < dim; k++) {
-            q_r += tex1Dfetch(tex_q, offset * dim + k) * r[i + k * npart];
-        }
-        sin_[i] = sin(q_r);
-        cos_[i] = cos(q_r);
-    }
-    """)
     global compute_ssf, tex_q, sum_kernel
 
+    # read and compile file ssf_kernel.cu
+    ssf_kernel_source = file(os.path.join(mdplot.__path__[0], 'gpu/ssf_kernel.cu')).read()
+    mod = SourceModule(ssf_kernel_source)
     compute_ssf = mod.get_function('compute_ssf')
     tex_q = mod.get_texref('tex_q')
 
