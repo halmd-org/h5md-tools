@@ -224,7 +224,7 @@ def ssf_cuda(q, r, block_size=64, copy=True):
     global timer_copy, timer_memory, timer_zero, timer_exp, timer_sum
 
     # CUDA execution dimensions
-    block = (block_size, 1, 1)
+    block = (32, 1, 1) # block size must correspond to BLOCK_SIZE in ssf_kernel.cu
     grid = (int(ceil(float(npart) / prod(block))), 1)
 
     # access module functions, textures and constants
@@ -253,8 +253,8 @@ def ssf_cuda(q, r, block_size=64, copy=True):
 
     # allocate space for results
     t1 = time()
-    gpu_sin = ga.zeros(npart, float32)
-    gpu_cos = ga.zeros(npart, float32)
+    gpu_sin = ga.zeros(int(prod(grid)), float32)
+    gpu_cos = ga.zeros(int(prod(grid)), float32)
     t2 = time()
     timer_memory += t2 - t1
 
@@ -298,5 +298,5 @@ def add_parser(subparsers):
     parser.add_argument('--cuda', action='store_true', help='use CUDA device to speed up the computation')
     parser.add_argument('--block-size', type=int, help='block size to be used for CUDA calls')
     parser.add_argument('--verbose', action='store_true')
-    parser.set_defaults(sample='0', q_limit=25, q_error=0.1, block_size=64)
+    parser.set_defaults(sample='0', q_limit=25, q_error=0.1, block_size=128)
 
