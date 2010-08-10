@@ -31,6 +31,7 @@ from mdplot.ext import _static_structure_factor
 import pycuda.autoinit
 import pycuda.driver as cuda
 import pycuda.gpuarray as ga
+from time import time
 
 """
 Compute and plot static structure factor
@@ -100,11 +101,16 @@ def plot(args):
         q_range = q_min * arange(1, nq + 1)
 
         # compute static structure factor over |q| range
-        from time import time
         S_q = zeros(nq)
         S_q2 = zeros(nq)
         timer_host = 0
         timer_gpu = 0
+        global timer_copy, timer_memory, timer_zero, timer_exp, timer_sum
+        timer_copy = 0
+        timer_memory = 0
+        timer_zero = 0
+        timer_exp = 0
+        timer_sum = 0
         for j, q_val in enumerate(q_range):
             # choose q vectors on surface of Ewald's sphere
             q = q_grid[where(abs(q_norm - q_val) < q_err)]
@@ -125,6 +131,14 @@ def plot(args):
         diff = abs(S_q - S_q2) / S_q
         idx = where(diff > 1e-6)
         print diff[idx], '@', q_range[idx]
+
+        print 'Copying: %.3f ms' % (1e3 * timer_copy)
+        print 'Memory allocation: %.3f ms' % (1e3 * timer_memory)
+        print 'Zeroing: %.3f ms' % (1e3 * timer_zero)
+        print 'Exponential: %.3f ms' % (1e3 * timer_exp)
+        print 'Summing: %.3f ms' % (1e3 * timer_sum)
+        print 'Overhead: %.3f ms' % (1e3 * (timer_gpu - (timer_memory + timer_zero + timer_exp + timer_sum)))
+        print
         print 'GPU  execution time: %.3f s' % (timer_gpu)
         print 'Host execution time: %.3f s' % (timer_host)
         print 'Speedup: %.1f' % (timer_host / timer_gpu)
@@ -207,36 +221,54 @@ def ssf_cuda(q, r, block_size=64):
     nq, dim = q.shape
     npart = r.shape[0]
 
+    global timer_copy, timer_memory, timer_zero, timer_exp, timer_sum
+
     # CUDA execution dimensions
     block = (block_size, 1, 1)
     grid = (int(ceil(float(npart) / prod(block))), 1)
 
     # copy particle positions to device
     # (x0, x1, x2, ..., xN, y0, y1, y2, ..., yN, z0, z1, z2, ..., zN)
+    t1 = time()
     gpu_r = ga.to_gpu(r.T.flatten().astype(float32))
+    t2 = time()
+    timer_copy += t2 - t1
 
     # allocate space for results
+    t1 = time()
     gpu_sin = ga.zeros(npart, float32)
     gpu_cos = ga.zeros(npart, float32)
+    t2 = time()
+    timer_memory += t2 - t1
 
     # loop over groups of wavevectors with (almost) equal magnitude
+    t1 = time()
     gpu_q = ga.to_gpu(q.flatten().astype(float32))
     gpu_q.bind_to_texref_ext(tex_q)
+    t2 = time()
+    timer_copy += t2 - t1
 
     # loop over wavevectors
     result = 0
     for i in range(nq):
+        t1 = time()
         gpu_sin.fill(0)
         gpu_cos.fill(0)
+        t2 = time()
         # compute exp(iq·r) for each particle
         # FIXME invoke kernel with prepared_call
 #        compute_ssf.prepared_call(grid, gpu_sin, gpu_cos, gpu_r, i, npart, dim)
         compute_ssf(gpu_sin, gpu_cos, gpu_r,
                     int32(i), int32(npart), int32(dim),
                     block=block, grid=grid, texrefs=[tex_q])
+        t3 = time()
         # sum(sin(q·r))^2 + sum(cos(q·r))^2
         result += pow(sum_kernel(gpu_sin).get(), 2)
         result += pow(sum_kernel(gpu_cos).get(), 2)
+        t4 = time()
+        timer_zero += t2 - t1
+        timer_exp += t3 - t2
+        timer_sum += t4 - t3
     # normalize result with #wavevectors and #particles
     return result / (nq * npart)
 
