@@ -30,6 +30,7 @@ from mdplot.ext import _static_structure_factor
 
 import pycuda.autoinit
 import pycuda.driver as cuda
+import pycuda.gpuarray as ga
 
 """
 Compute and plot static structure factor
@@ -203,8 +204,6 @@ def make_cuda_kernels():
                                  arguments="float *a")
 
 def ssf_cuda(q, r, block_size=64):
-    from pycuda.gpuarray import GPUArray, to_gpu, zeros, take
-
     nq, dim = q.shape
     npart = r.shape[0]
 
@@ -214,14 +213,14 @@ def ssf_cuda(q, r, block_size=64):
 
     # copy particle positions to device
     # (x0, x1, x2, ..., xN, y0, y1, y2, ..., yN, z0, z1, z2, ..., zN)
-    gpu_r = to_gpu(r.T.flatten().astype(float32))
+    gpu_r = ga.to_gpu(r.T.flatten().astype(float32))
 
     # allocate space for results
-    gpu_sin = zeros(npart, float32)
-    gpu_cos = zeros(npart, float32)
+    gpu_sin = ga.zeros(npart, float32)
+    gpu_cos = ga.zeros(npart, float32)
 
     # loop over groups of wavevectors with (almost) equal magnitude
-    gpu_q = to_gpu(q.flatten().astype(float32))
+    gpu_q = ga.to_gpu(q.flatten().astype(float32))
     gpu_q.bind_to_texref_ext(tex_q)
 
     # loop over wavevectors
