@@ -272,8 +272,7 @@ def ssf_cuda(q, r, block_size=64, copy=True):
         # compute exp(iq·r) for each particle
         # FIXME invoke kernel with prepared_call
 #        compute_ssf.prepared_call(grid, gpu_sin, gpu_cos, gpu_r, i)
-        compute_ssf(gpu_sin, gpu_cos, gpu_r,
-                    int32(i), int32(npart), int32(dim),
+        compute_ssf(gpu_sin, gpu_cos, gpu_r, int32(i),
                     block=block, grid=grid, texrefs=[tex_q])
         t2 = time()
         # sum(sin(q·r))^2 + sum(cos(q·r))^2
