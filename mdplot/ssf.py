@@ -57,17 +57,17 @@ def plot(args):
         param = H5.param
         try:
             if args.flavour:
-                trajectory = H5.trajectory._v_children[args.flavour]
+                samples = H5.trajectory._v_children[args.flavour].r
             else:
-                trajectory = H5.trajectory
+                samples = H5.trajectory.r
 
             # periodically extended particle positions
             # possibly read several samples
             idx = [int(x) for x in split(':', args.sample)]
             if len(idx) == 1 :
-                samples = array([trajectory.r[idx[0]]])
+                samples = array([samples[idx[0]]])
             elif len(idx) == 2:
-                samples = trajectory.r[idx[0]:idx[1]]
+                samples = samples[idx[0]:idx[1]]
             # periodic simulation box length
             L = param.mdsim._v_attrs.box_length
             # number of particles
@@ -100,6 +100,13 @@ def plot(args):
         # |q| value range
         q_range = q_min * arange(1, nq + 1)
 
+        # choose q vectors on surface of Ewald's sphere
+        q_list = {}
+        for j, q_val in enumerate(q_range):
+            q_list[j] = q_grid[where(abs(q_norm - q_val) < q_err)]
+            if args.verbose:
+                print '|q| = %.2f\t%4d vectors' % (q_val, len(q_list[j]))
+
         # compute static structure factor over |q| range
         S_q = zeros(nq)
         S_q2 = zeros(nq)
@@ -111,16 +118,13 @@ def plot(args):
         timer_zero = 0
         timer_exp = 0
         timer_sum = 0
-        for j, q_val in enumerate(q_range):
-            # choose q vectors on surface of Ewald's sphere
-            q = q_grid[where(abs(q_norm - q_val) < q_err)]
-            if args.verbose:
-                print '|q| = %.2f\t%4d vectors' % (q_val, len(q))
-            # average static structure factor over q vectors
-            for r in samples:
+        # average static structure factor over many samples
+        for r in samples:
+            # average over q vectors
+            for j,q in q_list.items():
                 if args.cuda:
                     t1 = time()
-                    S_q[j] += ssf_cuda(q, r, args.block_size)
+                    S_q[j] += ssf_cuda(q, r, args.block_size, j==0)
                     t2 = time()
                     S_q2[j] += _static_structure_factor(q, r)
                     t3 = time()
@@ -217,7 +221,7 @@ def make_cuda_kernels():
                                  reduce_expr="a+b", map_expr="a[i]",
                                  arguments="float *a")
 
-def ssf_cuda(q, r, block_size=64):
+def ssf_cuda(q, r, block_size=64, copy=True):
     nq, dim = q.shape
     npart = r.shape[0]
 
@@ -229,10 +233,12 @@ def ssf_cuda(q, r, block_size=64):
 
     # copy particle positions to device
     # (x0, x1, x2, ..., xN, y0, y1, y2, ..., yN, z0, z1, z2, ..., zN)
-    t1 = time()
-    gpu_r = ga.to_gpu(r.T.flatten().astype(float32))
-    t2 = time()
-    timer_copy += t2 - t1
+    if copy:
+        global gpu_r
+        t1 = time()
+        gpu_r = ga.to_gpu(r.T.flatten().astype(float32))
+        t2 = time()
+        timer_copy += t2 - t1
 
     # allocate space for results
     t1 = time()
