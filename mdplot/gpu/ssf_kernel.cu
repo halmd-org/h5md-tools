@@ -101,8 +101,13 @@ __global__ void compute_ssf(float* sin_block, float* cos_block, float const* r, 
     __shared__ float cos_[MAX_BLOCK_SIZE];
 
     const int i = GTID;
-    if (i >= npart)
+    if (i >= npart) {
+        // the placeholders contribute to the block sums below,
+        // set them to zero here
+        sin_[TID] = 0;
+        cos_[TID] = 0;
         return;
+    }
 
     float q_r = 0;
     for (int k=0; k < dim; k++) {
