@@ -33,9 +33,12 @@
 // store q vectors in texture
 texture<float, 1> tex_q;
 
+// global constants
+__constant__ int npart;
+__constant__ int dim;
+
 // compute exp(i q·r) for a single particle
-__global__ void compute_ssf(float *sin_, float *cos_, float *r,
-                            int offset, int npart, int dim)
+__global__ void compute_ssf(float* sin_, float* cos_, float const* r, int offset)
 {
     const int i = GTID;
     if (i >= npart)

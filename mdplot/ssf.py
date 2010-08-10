@@ -205,15 +205,13 @@ def make_cuda_kernels():
     from pycuda.compiler import SourceModule
     from pycuda.reduction import ReductionKernel
 
-    global compute_ssf, tex_q, sum_kernel
+    global ssf_module, tex_q, sum_kernel
 
     # read and compile file ssf_kernel.cu
     ssf_kernel_source = file(os.path.join(mdplot.__path__[0], 'gpu/ssf_kernel.cu')).read()
-    mod = SourceModule(ssf_kernel_source)
-    compute_ssf = mod.get_function('compute_ssf')
-    tex_q = mod.get_texref('tex_q')
+    ssf_module = SourceModule(ssf_kernel_source)
 
-#    compute_ssf.prepare("PPPPiii", block=(128, 1, 1))
+#    compute_ssf.prepare("PPPi", block=(128, 1, 1))
 
     sum_kernel = ReductionKernel(float32, neutral="0",
                                  reduce_expr="a+b", map_expr="a[i]",
@@ -228,6 +226,21 @@ def ssf_cuda(q, r, block_size=64, copy=True):
     # CUDA execution dimensions
     block = (block_size, 1, 1)
     grid = (int(ceil(float(npart) / prod(block))), 1)
+
+    # access module functions, textures and constants
+    if not 'compute_ssf' in globals():
+        global compute_ssf, tex_q, dim_ptr, npart_ptr
+        compute_ssf = ssf_module.get_function('compute_ssf')
+        tex_q = ssf_module.get_texref('tex_q')
+        dim_ptr = ssf_module.get_global('dim')[0]
+        npart_ptr = ssf_module.get_global('npart')[0]
+
+    # set device constants
+    t1 = time()
+    cuda.memset_d32(dim_ptr, dim, 1)
+    cuda.memset_d32(npart_ptr, npart, 1)
+    t2 = time()
+    timer_copy += t2 - t1
 
     # copy particle positions to device
     # (x0, x1, x2, ..., xN, y0, y1, y2, ..., yN, z0, z1, z2, ..., zN)
@@ -245,7 +258,7 @@ def ssf_cuda(q, r, block_size=64, copy=True):
     t2 = time()
     timer_memory += t2 - t1
 
-    # loop over groups of wavevectors with (almost) equal magnitude
+    # copy group of wavevectors with (almost) equal magnitude
     t1 = time()
     gpu_q = ga.to_gpu(q.flatten().astype(float32))
     gpu_q.bind_to_texref_ext(tex_q)
@@ -258,7 +271,7 @@ def ssf_cuda(q, r, block_size=64, copy=True):
         t1 = time()
         # compute exp(iq·r) for each particle
         # FIXME invoke kernel with prepared_call
-#        compute_ssf.prepared_call(grid, gpu_sin, gpu_cos, gpu_r, i, npart, dim)
+#        compute_ssf.prepared_call(grid, gpu_sin, gpu_cos, gpu_r, i)
         compute_ssf(gpu_sin, gpu_cos, gpu_r,
                     int32(i), int32(npart), int32(dim),
                     block=block, grid=grid, texrefs=[tex_q])
