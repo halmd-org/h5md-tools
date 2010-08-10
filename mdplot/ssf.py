@@ -209,7 +209,7 @@ def make_cuda_kernels():
 
     # read and compile file ssf_kernel.cu
     ssf_kernel_source = file(os.path.join(mdplot.__path__[0], 'gpu/ssf_kernel.cu')).read()
-    ssf_module = SourceModule(ssf_kernel_source)
+    ssf_module = SourceModule(ssf_kernel_source, no_extern_c=True)
 
 #    compute_ssf.prepare("PPPi", block=(128, 1, 1))
 
@@ -217,14 +217,14 @@ def make_cuda_kernels():
                                  reduce_expr="a+b", map_expr="a[i]",
                                  arguments="float *a")
 
-def ssf_cuda(q, r, block_size=64, copy=True):
+def ssf_cuda(q, r, block_size=128, copy=True):
     nq, dim = q.shape
     npart = r.shape[0]
 
     global timer_copy, timer_memory, timer_zero, timer_exp, timer_sum
 
     # CUDA execution dimensions
-    block = (32, 1, 1) # block size must correspond to BLOCK_SIZE in ssf_kernel.cu
+    block = (block_size, 1, 1)
     grid = (int(ceil(float(npart) / prod(block))), 1)
 
     # access module functions, textures and constants
@@ -253,8 +253,8 @@ def ssf_cuda(q, r, block_size=64, copy=True):
 
     # allocate space for results
     t1 = time()
-    gpu_sin = ga.zeros(int(prod(grid)), float32)
-    gpu_cos = ga.zeros(int(prod(grid)), float32)
+    gpu_sin = ga.empty(int(prod(grid)), float32)
+    gpu_cos = ga.empty(int(prod(grid)), float32)
     t2 = time()
     timer_memory += t2 - t1
 

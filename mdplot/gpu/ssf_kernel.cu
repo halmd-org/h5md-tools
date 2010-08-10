@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#define BLOCK_SIZE 32
+#define MAX_BLOCK_SIZE 512
 
 // thread ID within block
 #define TID     threadIdx.x
@@ -39,12 +39,66 @@ texture<float, 1> tex_q;
 __constant__ int npart;
 __constant__ int dim;
 
+// copy enable_if_c and disable_if_c from Boost.Utility
+// to avoid dependency on Boost headers
+template <bool B, class T = void>
+struct enable_if_c {
+    typedef T type;
+};
+
+template <class T>
+struct enable_if_c<false, T> {};
+
+template <bool B, class T = void>
+struct disable_if_c {
+    typedef T type;
+};
+
+template <class T>
+struct disable_if_c<true, T> {};
+
+// recursive reduction function,
+// terminate for threads=0
+template <unsigned threads, typename T>
+__device__ typename disable_if_c<threads>::type
+sum_reduce(T*, T*) {}
+
+// reduce two array simultaneously by summation,
+// size of a,b must be at least 2 * threads
+template <unsigned threads, typename T>
+__device__ typename enable_if_c<threads>::type
+sum_reduce(T* a, T* b)
+{
+    if (TID < threads) {
+        a[TID] += a[TID + threads];
+        b[TID] += b[TID + threads];
+    }
+    if (threads >= warpSize) {
+        __syncthreads();
+    }
+
+    if (threads >= 2) {
+        sum_reduce<threads / 2>(a, b);
+    }
+}
+
+/* FIXME
+typedef void (*sum_reduce_type)(float*, float*);
+__device__ sum_reduce_type sum_reduce_select[] = {
+    &sum_reduce<0>, &sum_reduce<1>, &sum_reduce<2>, &sum_reduce<4>,
+    &sum_reduce<8>, &sum_reduce<16>, &sum_reduce<32>, &sum_reduce<64>,
+    &sum_reduce<128>, &sum_reduce<256>
+};
+*/
+
+extern "C" {
+
 // compute exp(i q·r) for a single particle,
 // return block sum of results
 __global__ void compute_ssf(float* sin_block, float* cos_block, float const* r, int offset)
 {
-    __shared__ float sin_[BLOCK_SIZE];
-    __shared__ float cos_[BLOCK_SIZE];
+    __shared__ float sin_[MAX_BLOCK_SIZE];
+    __shared__ float cos_[MAX_BLOCK_SIZE];
 
     const int i = GTID;
     if (i >= npart)
@@ -59,60 +113,20 @@ __global__ void compute_ssf(float* sin_block, float* cos_block, float const* r, 
     __syncthreads();
 
     // accumulate results within block
-    #if (BLOCK_SIZE >= 512)
-        if (TID < 256) {
-            sin_[TID] += sin_[TID + 256];
-            cos_[TID] += cos_[TID + 256];
-        }
-        __syncthreads();
-    #endif
+    if (TDIM == 512) sum_reduce<256>(sin_, cos_);
+    else if (TDIM == 256) sum_reduce<128>(sin_, cos_);
+    else if (TDIM == 128) sum_reduce<64>(sin_, cos_);
+    else if (TDIM == 64) sum_reduce<32>(sin_, cos_);
+    else if (TDIM == 32) sum_reduce<16>(sin_, cos_);
+    else if (TDIM == 16) sum_reduce<8>(sin_, cos_);
+    else if (TDIM == 8) sum_reduce<4>(sin_, cos_);
 
-    #if (BLOCK_SIZE >= 256)
-        if (TID < 128) {
-            sin_[TID] += sin_[TID + 128];
-            cos_[TID] += cos_[TID + 128];
-        }
-        __syncthreads();
-    #endif
-
-    #if (BLOCK_SIZE >= 128)
-        if (TID < 64) {
-            sin_[TID] += sin_[TID + 64];
-            cos_[TID] += cos_[TID + 64];
-        }
-        __syncthreads();
-    #endif
-
-    if (TID < 32) {
-        if (BLOCK_SIZE >= 64) {
-            sin_[TID] += sin_[TID + 32];
-            cos_[TID] += cos_[TID + 32];
-        }
-        if (BLOCK_SIZE >= 32) {
-            sin_[TID] += sin_[TID + 16];
-            cos_[TID] += cos_[TID + 16];
-        }
-        if (BLOCK_SIZE >= 16) {
-            sin_[TID] += sin_[TID + 8];
-            cos_[TID] += cos_[TID + 8];
-        }
-        if (BLOCK_SIZE >= 8) {
-            sin_[TID] += sin_[TID + 4];
-            cos_[TID] += cos_[TID + 4];
-        }
-        if (BLOCK_SIZE >= 4) {
-            sin_[TID] += sin_[TID + 2];
-            cos_[TID] += cos_[TID + 2];
-        }
-        if (BLOCK_SIZE >= 2) {
-            sin_[TID] += sin_[TID + 1];
-            cos_[TID] += cos_[TID + 1];
-        }
-    }
-
-    if (TID < 1) {
+    if (TID == 0) {
         sin_block[BID] = sin_[0];
         cos_block[BID] = cos_[0];
     }
 }
+
+}  // extern "C"
+
 
