@@ -77,9 +77,8 @@ sum_reduce(T* a, T* b)
         __syncthreads();
     }
 
-    if (threads >= 2) {
-        sum_reduce<threads / 2>(a, b);
-    }
+    // recursion ends by calling sum_reduce<0>
+    sum_reduce<threads / 2>(a, b);
 }
 
 /* FIXME
@@ -106,15 +105,15 @@ __global__ void compute_ssf(float* sin_block, float* cos_block, float const* r, 
         // set them to zero here
         sin_[TID] = 0;
         cos_[TID] = 0;
-        return;
     }
-
-    float q_r = 0;
-    for (int k=0; k < dim; k++) {
-        q_r += tex1Dfetch(tex_q, offset * dim + k) * r[i + k * npart];
+    else {
+        float q_r = 0;
+        for (int k=0; k < dim; k++) {
+            q_r += tex1Dfetch(tex_q, offset * dim + k) * r[i + k * npart];
+        }
+        sin_[TID] = sin(q_r);
+        cos_[TID] = cos(q_r);
     }
-    sin_[TID] = sin(q_r);
-    cos_[TID] = cos(q_r);
     __syncthreads();
 
     // accumulate results within block
