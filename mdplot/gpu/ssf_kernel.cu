@@ -132,6 +132,50 @@ __global__ void compute_ssf(float* sin_block, float* cos_block, float const* r, 
     }
 }
 
+// reduce two arrays by summation using a single block of threads,
+// thus, all communication is based on shared memory
+__global__ void sum_reduce_block(float const* a, float const* b, float *result, uint size)
+{
+    __shared__ float sum_a[MAX_BLOCK_SIZE];
+    __shared__ float sum_b[MAX_BLOCK_SIZE];
+
+//    assert(BDIM == 1);
+
+    // initialise placeholders
+    // if array is smaller than block size
+    if (TID >= size) {
+        sum_a[TID] = 0;
+        sum_b[TID] = 0;
+    }
+    else {
+        // load values from global device memory
+        float acc_a = 0;
+        float acc_b = 0;
+        for (uint k = TID; k < size; k += TDIM) {
+            acc_a += a[k];
+            acc_b += b[k];
+        }
+        // reduced value for this thread
+        sum_a[TID] = acc_a;
+        sum_b[TID] = acc_b;
+    }
+    __syncthreads();
+
+    // compute reduced value for all threads in block
+    if (TDIM == 512) sum_reduce<256>(sum_a, sum_b);
+    else if (TDIM == 256) sum_reduce<128>(sum_a, sum_b);
+    else if (TDIM == 128) sum_reduce<64>(sum_a, sum_b);
+    else if (TDIM == 64) sum_reduce<32>(sum_a, sum_b);
+    else if (TDIM == 32) sum_reduce<16>(sum_a, sum_b);
+    else if (TDIM == 16) sum_reduce<8>(sum_a, sum_b);
+    else if (TDIM == 8) sum_reduce<4>(sum_a, sum_b);
+
+    if (TID == 0) {
+        result[0] = sum_a[0];
+        result[1] = sum_b[0];
+    }
+}
+
 }  // extern "C"
 
 
