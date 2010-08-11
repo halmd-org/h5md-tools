@@ -125,13 +125,15 @@ def plot(args):
                     t1 = time()
                     S_q[j] += ssf_cuda(q, r, args.block_size, j==0)
                     t2 = time()
-                    S_q2[j] += _static_structure_factor(q, r)
-                    t3 = time()
                     timer_gpu += t2 - t1
-                    timer_host += t3 - t2
+                    if args.profiling:
+                        S_q2[j] += _static_structure_factor(q, r)
+                        t3 = time()
+                        timer_host += t3 - t2
                 else:
                     S_q[j] += _static_structure_factor(q, r)
-        if args.cuda:
+
+        if args.cuda and args.profiling:
             diff = abs(S_q - S_q2) / S_q
             idx = where(diff > 1e-6)
             print diff[idx], '@', q_range[idx]
@@ -278,9 +280,6 @@ def ssf_cuda(q, r, block_size=128, copy=True):
         sum_reduce_block(gpu_sin, gpu_cos, gpu_sum, int32(gpu_sin.size),
                          block=(512,1,1), grid=(1,1))
         result += sum(pow(gpu_sum.get(), 2))
-        # alternative: do remaining summation of block sums on host
-#        result += pow(sum(gpu_sin.get()), 2)
-#        result += pow(sum(gpu_cos.get()), 2)
         t3 = time()
         timer_exp += t2 - t1
         timer_sum += t3 - t2
@@ -300,6 +299,7 @@ def add_parser(subparsers):
     parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s)')
     parser.add_argument('--cuda', action='store_true', help='use CUDA device to speed up the computation')
     parser.add_argument('--block-size', type=int, help='block size to be used for CUDA calls')
+    parser.add_argument('--profiling', action='store_true', help='output profiling results and compare with host version')
     parser.add_argument('--verbose', action='store_true')
     parser.set_defaults(sample='0', q_limit=25, q_error=0.1, block_size=256)
 
