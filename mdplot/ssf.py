@@ -127,22 +127,23 @@ def plot(args):
                     t2 = time()
                     timer_gpu += t2 - t1
                     if args.profiling:
-                        S_q2[j] += _static_structure_factor(q, r)
+#                        S_q2[j] += _static_structure_factor(q, r)
                         t3 = time()
                         timer_host += t3 - t2
                 else:
                     S_q[j] += _static_structure_factor(q, r)
 
         if args.cuda and args.profiling:
-            diff = abs(S_q - S_q2) / S_q
-            idx = where(diff > 1e-6)
-            print diff[idx], '@', q_range[idx]
+#            diff = abs(S_q - S_q2) / S_q
+#            idx = where(diff > 1e-6)
+#            print diff[idx], '@', q_range[idx]
 
             print 'Copying: %.3f ms' % (1e3 * timer_copy)
             print 'Memory allocation: %.3f ms' % (1e3 * timer_memory)
             print 'Exponential: %.3f ms' % (1e3 * timer_exp)
-            print 'Summing: %.3f ms' % (1e3 * timer_sum)
-            print 'Overhead: %.3f ms' % (1e3 * (timer_gpu - (timer_memory + timer_exp + timer_sum)))
+            print 'Summation: %.3f ms' % (1e3 * timer_sum)
+            print 'Overhead: %.3f ms' % (1e3 * (timer_gpu - \
+                    (timer_copy + timer_memory + timer_exp + timer_sum)))
             print
             print 'GPU  execution time: %.3f s' % (timer_gpu)
             print 'Host execution time: %.3f s' % (timer_host)
@@ -224,13 +225,12 @@ def ssf_cuda(q, r, block_size=128, copy=True):
 
     # CUDA execution dimensions
     block = (block_size, 1, 1)
-    grid = (int(ceil(float(npart) / prod(block))), 1)
+    grid = (64, 1)
 
     # access module functions, textures and constants
     if not 'compute_ssf' in globals():
-        global compute_ssf, sum_reduce_block, tex_q, dim_ptr, npart_ptr
+        global compute_ssf, tex_q, dim_ptr, npart_ptr
         compute_ssf = ssf_module.get_function('compute_ssf')
-        sum_reduce_block = ssf_module.get_function('sum_reduce_block')
         tex_q = ssf_module.get_texref('tex_q')
         dim_ptr = ssf_module.get_global('dim')[0]
         npart_ptr = ssf_module.get_global('npart')[0]
@@ -255,7 +255,6 @@ def ssf_cuda(q, r, block_size=128, copy=True):
     t1 = time()
     gpu_sin = ga.empty(int(prod(grid)), float32)
     gpu_cos = ga.empty(int(prod(grid)), float32)
-    gpu_sum = ga.empty(2, float32)
     t2 = time()
     timer_memory += t2 - t1
 
@@ -277,9 +276,9 @@ def ssf_cuda(q, r, block_size=128, copy=True):
                     block=block, grid=grid, texrefs=[tex_q])
         t2 = time()
         # sum(sin(q·r))^2 + sum(cos(q·r))^2
-        sum_reduce_block(gpu_sin, gpu_cos, gpu_sum, int32(gpu_sin.size),
-                         block=(512,1,1), grid=(1,1))
-        result += sum(pow(gpu_sum.get(), 2))
+        sin_ = gpu_sin.get()
+        cos_ = gpu_cos.get()
+        result += pow(sum(sin_), 2) + pow(sum(cos_), 2)
         t3 = time()
         timer_exp += t2 - t1
         timer_sum += t3 - t2
