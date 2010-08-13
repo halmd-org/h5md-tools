@@ -133,5 +133,48 @@ __global__ void compute_ssf(float* sin_block, float* cos_block, float const* r)
     }
 }
 
+// compute the remaining sum, square and add sin and cos parts
+// for each wavevector separately, finally sum everything
+// ssf = sum(sin(q·r))^2 + sum(cos(q·r))^2
+// 
+// the final result is stored in 'ssf'
+// 'bdim' is the number of blocks (grid size) in the preceding call to compute_ssf()
+__global__ void finalise_ssf(float* sin_block, float* cos_block, float* ssf, uint bdim)
+{
+    __shared__ float s_sum[MAX_BLOCK_SIZE];
+    __shared__ float c_sum[MAX_BLOCK_SIZE];
+
+    float result = 0;
+    // outer loop over wavevectors, distribute over block grid
+    for (uint i = BID; i < nq; i += BDIM) {
+        s_sum[TID] = 0;
+        c_sum[TID] = 0;
+        for (uint j = TID; j < bdim; j += TDIM) {
+            s_sum[TID] += sin_block[i * bdim + TID];
+            c_sum[TID] += cos_block[i * bdim + TID];
+        }
+        __syncthreads();
+
+        // accumulate results within block
+        if (TDIM == 512) sum_reduce<256>(s_sum, c_sum);
+        else if (TDIM == 256) sum_reduce<128>(s_sum, c_sum);
+        else if (TDIM == 128) sum_reduce<64>(s_sum, c_sum);
+        else if (TDIM == 64) sum_reduce<32>(s_sum, c_sum);
+        else if (TDIM == 32) sum_reduce<16>(s_sum, c_sum);
+        else if (TDIM == 16) sum_reduce<8>(s_sum, c_sum);
+        else if (TDIM == 8) sum_reduce<4>(s_sum, c_sum);
+
+        // compute square 
+        if (TID == 0) {
+            result += s_sum[0] * s_sum[0] + c_sum[0] * c_sum[0];
+        }
+        __syncthreads();
+    }
+    // store result in global memory
+    if (TID == 0) {
+        ssf[BID] = result;
+    }
+}
+
 }  // extern "C"
 
