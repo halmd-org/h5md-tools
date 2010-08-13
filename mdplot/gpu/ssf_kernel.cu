@@ -36,8 +36,9 @@
 texture<float, 1> tex_q;
 
 // global constants
-__constant__ int npart;
-__constant__ int dim;
+__constant__ uint npart;     // number of particles
+__constant__ uint nq;        // number of wavevectors
+__constant__ uint dim;       // space dimension
 
 // copy enable_if_c and disable_if_c from Boost.Utility
 // to avoid dependency on Boost headers
@@ -92,38 +93,43 @@ __device__ sum_reduce_type sum_reduce_select[] = {
 
 extern "C" {
 
-// compute exp(i q·r) for a single particle,
+// compute exp(i q·r) for a single particle and for a set of wavevectors,
 // return block sum of results
-__global__ void compute_ssf(float* sin_block, float* cos_block, float const* r, int offset)
+__global__ void compute_ssf(float* sin_block, float* cos_block, float const* r)
 {
     __shared__ float sin_[MAX_BLOCK_SIZE];
     __shared__ float cos_[MAX_BLOCK_SIZE];
 
-    sin_[TID] = 0;
-    cos_[TID] = 0;
-    for (uint i = GTID; i < npart; i += GTDIM) {
-        // compute scalar product q·r
-        float q_r = 0;
-        for (int k=0; k < dim; k++) {
-            q_r += tex1Dfetch(tex_q, offset * dim + k) * r[i + k * npart];
+    // outer loop over wavevectors
+    for (uint i=0; i < nq; i++) {
+        sin_[TID] = 0;
+        cos_[TID] = 0;
+        for (uint j = GTID; j < npart; j += GTDIM) {
+            // compute scalar product q·r
+            float q_r = 0;
+            for (uint k=0; k < dim; k++) {
+                // particle positions are stored in 'Fortran order'
+                q_r += tex1Dfetch(tex_q, i * dim + k) * r[j + k * npart];
+            }
+            sin_[TID] += sin(q_r);
+            cos_[TID] += cos(q_r);
         }
-        sin_[TID] += sin(q_r);
-        cos_[TID] += cos(q_r);
-    }
-    __syncthreads();
+        __syncthreads();
 
-    // accumulate results within block
-    if (TDIM == 512) sum_reduce<256>(sin_, cos_);
-    else if (TDIM == 256) sum_reduce<128>(sin_, cos_);
-    else if (TDIM == 128) sum_reduce<64>(sin_, cos_);
-    else if (TDIM == 64) sum_reduce<32>(sin_, cos_);
-    else if (TDIM == 32) sum_reduce<16>(sin_, cos_);
-    else if (TDIM == 16) sum_reduce<8>(sin_, cos_);
-    else if (TDIM == 8) sum_reduce<4>(sin_, cos_);
+        // accumulate results within block
+        if (TDIM == 512) sum_reduce<256>(sin_, cos_);
+        else if (TDIM == 256) sum_reduce<128>(sin_, cos_);
+        else if (TDIM == 128) sum_reduce<64>(sin_, cos_);
+        else if (TDIM == 64) sum_reduce<32>(sin_, cos_);
+        else if (TDIM == 32) sum_reduce<16>(sin_, cos_);
+        else if (TDIM == 16) sum_reduce<8>(sin_, cos_);
+        else if (TDIM == 8) sum_reduce<4>(sin_, cos_);
 
-    if (TID == 0) {
-        sin_block[BID] = sin_[0];
-        cos_block[BID] = cos_[0];
+        if (TID == 0) {
+            sin_block[i * BDIM + BID] = sin_[0];
+            cos_block[i * BDIM + BID] = cos_[0];
+        }
+        __syncthreads();
     }
 }
 

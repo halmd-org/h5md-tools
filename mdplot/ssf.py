@@ -215,7 +215,7 @@ def make_cuda_kernels():
     ssf_kernel_source = file(os.path.join(mdplot.__path__[0], 'gpu/ssf_kernel.cu')).read()
     ssf_module = SourceModule(ssf_kernel_source, no_extern_c=True)
 
-#    compute_ssf.prepare("PPPi", block=(128, 1, 1))
+#    compute_ssf.prepare("PPP", block=(128, 1, 1))
 
 def ssf_cuda(q, r, block_size=128, copy=True):
     nq, dim = q.shape
@@ -229,16 +229,18 @@ def ssf_cuda(q, r, block_size=128, copy=True):
 
     # access module functions, textures and constants
     if not 'compute_ssf' in globals():
-        global compute_ssf, tex_q, dim_ptr, npart_ptr
+        global compute_ssf, tex_q, dim_ptr, npart_ptr, nq_ptr
         compute_ssf = ssf_module.get_function('compute_ssf')
         tex_q = ssf_module.get_texref('tex_q')
         dim_ptr = ssf_module.get_global('dim')[0]
         npart_ptr = ssf_module.get_global('npart')[0]
+        nq_ptr = ssf_module.get_global('nq')[0]
 
     # set device constants
     t1 = time()
     cuda.memset_d32(dim_ptr, dim, 1)
     cuda.memset_d32(npart_ptr, npart, 1)
+    cuda.memset_d32(nq_ptr, nq, 1)
     t2 = time()
     timer_copy += t2 - t1
 
@@ -253,8 +255,8 @@ def ssf_cuda(q, r, block_size=128, copy=True):
 
     # allocate space for results
     t1 = time()
-    gpu_sin = ga.empty(int(prod(grid)), float32)
-    gpu_cos = ga.empty(int(prod(grid)), float32)
+    gpu_sin = ga.empty(int(nq * prod(grid)), float32)
+    gpu_cos = ga.empty(int(nq * prod(grid)), float32)
     t2 = time()
     timer_memory += t2 - t1
 
@@ -265,23 +267,21 @@ def ssf_cuda(q, r, block_size=128, copy=True):
     t2 = time()
     timer_copy += t2 - t1
 
-    # loop over wavevectors
-    result = 0
-    for i in range(nq):
-        t1 = time()
-        # compute exp(iq·r) for each particle
-        # FIXME invoke kernel with prepared_call
-#        compute_ssf.prepared_call(grid, gpu_sin, gpu_cos, gpu_r, i)
-        compute_ssf(gpu_sin, gpu_cos, gpu_r, int32(i),
-                    block=block, grid=grid, texrefs=[tex_q])
-        t2 = time()
-        # sum(sin(q·r))^2 + sum(cos(q·r))^2
-        sin_ = gpu_sin.get()
-        cos_ = gpu_cos.get()
-        result += pow(sum(sin_), 2) + pow(sum(cos_), 2)
-        t3 = time()
-        timer_exp += t2 - t1
-        timer_sum += t3 - t2
+    # compute exp(iq·r) for each particle
+    t1 = time()
+    compute_ssf(gpu_sin, gpu_cos, gpu_r,
+                block=block, grid=grid, texrefs=[tex_q])
+    t2 = time()
+    # sum(sin(q·r))^2 + sum(cos(q·r))^2
+    sin_ = gpu_sin.get().reshape((nq, -1))
+    cos_ = gpu_cos.get().reshape((nq, -1))
+    # inner sum() over blocks, outer sum() over wavevectors
+    result  = sum(pow(sum(sin_, axis=1), 2))
+    result += sum(pow(sum(cos_, axis=1), 2))
+    t3 = time()
+    timer_exp += t2 - t1
+    timer_sum += t3 - t2
+
     # normalize result with #wavevectors and #particles
     return result / (nq * npart)
 
