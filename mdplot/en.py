@@ -113,20 +113,28 @@ def plot(args):
             # positional coordinates dimension
             dim = H5.param.mdsim._v_attrs.dimension
             if dset == 'VZ' and dim == 3:
-                data = H5._v_children['VCM']
+                data = array(H5.VCM)
             else:
-                data = H5._v_children[dset]
-            x = data[:, 0]
+                data = array(H5._v_children[dset])
+
+            # read time as separate dataset
+            try:
+                x = array(H5.TIME)
+            except tables.exceptions.NoSuchNodeError:
+                # old file format, extract time from first column
+                x = data[:, 0]
+                data = data[:, 1:]
+
             if dset == 'VCM':
                 # calculate center of velocity magnitude
                 if dim == 3:
-                    y = sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2] + data[:, 3] * data[:, 3])
+                    y = sqrt(data[:, 0] * data[:, 0] + data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
                 else:
-                    y = sqrt(data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
+                    y = sqrt(data[:, 0] * data[:, 0] + data[:, 1] * data[:, 1])
             elif dset == 'VZ' and dim == 3:
-                y = data[:, 3]
+                y = data[:, 2]
             else:
-                y = data[:, 1]
+                y = data
 
             try:
                 version = H5.param.program._v_attrs.version
