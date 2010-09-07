@@ -256,8 +256,8 @@ def plot(args):
 
 
 def add_parser(subparsers):
-    parser = subparsers.add_parser('en', help='equilibrium or stationary properties')
-    parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 energy file')
+    parser = subparsers.add_parser('msv', help='macroscopic state variables')
+    parser.add_argument('input', metavar='INPUT', nargs='+', help='MSV file in HDF5 format')
     parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM', 'VZ'], help='equilibrium or stationary property')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
