@@ -54,16 +54,20 @@ def plot(args):
             try:
                 # particle positions of phase space sample
                 # possibly read several samples
+                trajectory = H5.trajectory
                 if args.flavour:
-                    trajectory = H5.trajectory._v_children[args.flavour]
+                    trajectory = trajectory._v_children[args.flavour]
+                # backwards compatibility
+                if "r" in trajectory._v_children:
+                    position = H5.trajectory.r
                 else:
-                    trajectory = H5.trajectory
+                    position = H5.trajectory.position
 
                 idx = [int(x) for x in args.sample.split(':')]
                 if len(idx) == 1 :
-                    samples = array([trajectory.r[idx[0]]])
+                    samples = array([position[idx[0]]])
                 elif len(idx) == 2:
-                    samples = trajectory.r[idx[0]:idx[1]]
+                    samples = position[idx[0]:idx[1]]
             except IndexError:
                 raise SystemExit('out-of-bounds phase space sample number')
 
