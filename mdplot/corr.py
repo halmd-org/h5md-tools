@@ -74,7 +74,6 @@ def plot(args):
                     data = H5._v_children[dset]
 
                 # merge block levels, discarding time zero
-                tcf = data[:, 1:, :]
                 if data.shape[0] == 0:
                     print 'Skip empty data set: %s:%s' % (fn, dset)
                     continue
@@ -112,18 +111,31 @@ def plot(args):
                         y = y / y0
 
                 else:
-                    if args.unordered:
-                        x, y, yerr = tcf[:, :, 0], tcf[:, :, 1], tcf[:, :, 2]
+                    if dset in ('VAC_FASTEST', 'VAC_SLOWEST'):
+                        # select subset, discard threshold value
+                        if args.subset == None:
+                            raise SystemExit("Option --subset is mandatory for type '%s'" % dset)
+                        tcf = ascontiguousarray(data[args.subset, ..., 1:])
                     else:
+                        tcf = data
+
+                    if args.unordered:
+                        x, y, yerr = tcf[:, 1:, 0], tcf[:, 1:, 1], tcf[:, 1:, 2]
+                        y0 = tcf[0, 0, 1]
+                    else:
+                        # separate time zero
+                        tcf_zero, tcf = tcf[0, 0, :], ascontiguousarray(tcf[:, 1:, :])
+                        # merge block levels
                         tcf.shape = -1, tcf.shape[-1]
+                        tcf_zero.shape = 1, tcf.shape[-1]
                         # prepend time zero from lowest block
-                        tcf = concatenate((data[0, 0, :].reshape(1, tcf.shape[-1]), tcf))
+                        tcf = concatenate(((tcf_zero), tcf))
                         # time-order correlation function samples
                         time_order = tcf[:, 0].argsort()
                         x, y, yerr = tcf[time_order, 0], tcf[time_order, 1], tcf[time_order, 2]
+                        y0 = tcf_zero[0, 1]
 
                     if args.normalize:
-                        y0 = data[0, 0, 1]
                         y, yerr = (y / y0), (yerr / y0)
 
                 if args.label:
@@ -237,6 +249,8 @@ def plot(args):
         'DIFFMSD': r'$\frac{1}{2 d}\frac{d}{dt}\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
         'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle\delta r(t^*)^2\rangle$',
         'VAC': r'$\langle v(t^*)v(0)\rangle$',
+        'VAC_FASTEST': r'$\langle v(t^*)v(0)\rangle_\text{fast}$',
+        'VAC_SLOWEST': r'$\langle v(t^*)v(0)\rangle_\text{slow}$',
         'STRESS': r'$\eta(t)=\left\langle \Pi^{\alpha\beta}_0(t) \Pi^{\alpha\beta}_0(0)\right\rangle$',
         'HELFAND': r'$\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
         'DIFFHELFAND': r'$\frac{1}{2}\frac{d}{dt}\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
@@ -253,8 +267,9 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
-    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC', 'STRESS', 'HELFAND', 'DIFFHELFAND', 'DIFF2HELFAND'], help='correlation function')
+    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC', 'VAC_FASTEST', 'VAC_SLOWEST', 'STRESS', 'HELFAND', 'DIFFHELFAND', 'DIFF2HELFAND'], help='correlation function')
     parser.add_argument('--flavour', help='flavour of correlation functions, selects subgroup in HDF5 file')
+    parser.add_argument('--subset', type=int, help='select subset of data (first index, for VAC_FASTEST etc.)')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
