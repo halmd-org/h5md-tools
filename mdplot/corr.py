@@ -111,7 +111,7 @@ def plot(args):
                         y = y / y0
 
                 else:
-                    if dset in ('VAC_FASTEST', 'VAC_SLOWEST'):
+                    if dset.find('VAC_') == 0:
                         # select subset, discard threshold value
                         if args.subset == None:
                             raise SystemExit("Option --subset is mandatory for type '%s'" % dset)
@@ -251,6 +251,8 @@ def plot(args):
         'VAC': r'$\langle v(t^*)v(0)\rangle$',
         'VAC_FASTEST': r'$\langle v(t^*)v(0)\rangle_\text{fast}$',
         'VAC_SLOWEST': r'$\langle v(t^*)v(0)\rangle_\text{slow}$',
+        'VAC_MOBILE': r'$\langle v(t^*)v(0)\rangle_\text{mobile}$',
+        'VAC_IMMOBILE': r'$\langle v(t^*)v(0)\rangle_\text{immobile}$',
         'STRESS': r'$\eta(t)=\left\langle \Pi^{\alpha\beta}_0(t) \Pi^{\alpha\beta}_0(0)\right\rangle$',
         'HELFAND': r'$\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
         'DIFFHELFAND': r'$\frac{1}{2}\frac{d}{dt}\langle \sum_i [u_{i\alpha}(t) r_{i\beta}(t) - u_{i\alpha}(0) r_{i\beta}(0)]\rangle$',
@@ -267,7 +269,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
-    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC', 'VAC_FASTEST', 'VAC_SLOWEST', 'STRESS', 'HELFAND', 'DIFFHELFAND', 'DIFF2HELFAND'], help='correlation function')
+    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC', 'VAC_FASTEST', 'VAC_SLOWEST', 'VAC_MOBILE', 'VAC_IMMOBILE', 'STRESS', 'HELFAND', 'DIFFHELFAND', 'DIFF2HELFAND'], help='correlation function')
     parser.add_argument('--flavour', help='flavour of correlation functions, selects subgroup in HDF5 file')
     parser.add_argument('--subset', type=int, help='select subset of data (first index, for VAC_FASTEST etc.)')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
