@@ -134,7 +134,7 @@ def plot(args):
             elif dset == 'VZ' and dim == 3:
                 y = data[:, 2]
             else:
-                y = data
+                y = data.flatten()
 
             try:
                 version = H5.param.program._v_attrs.version
