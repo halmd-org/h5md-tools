@@ -27,10 +27,6 @@ import tables
 import mdplot.label
 import ssf
 from mdplot.ext import _static_structure_factor
-
-import pycuda.autoinit
-import pycuda.driver as cuda
-import pycuda.gpuarray as ga
 from time import time
 
 """
@@ -39,7 +35,9 @@ Compute and plot static structure factor
 def plot(args):
     from matplotlib import pyplot as plt
 
+    # import pycuda only if required
     if args.cuda:
+        import pycuda.autoinit
         make_cuda_kernels()
 
     ax = plt.axes()
@@ -218,6 +216,9 @@ def make_cuda_kernels():
 #    compute_ssf.prepare("PPP", block=(128, 1, 1))
 
 def ssf_cuda(q, r, block_size=128, copy=True):
+    import pycuda.driver as cuda
+    import pycuda.gpuarray as ga
+
     nq, dim = q.shape
     npart = r.shape[0]
 
