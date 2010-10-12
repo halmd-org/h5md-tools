@@ -22,10 +22,10 @@
 import os, os.path
 from matplotlib import ticker
 from numpy import *
+import re
 import sys
 import tables
 import mdplot.label
-
 
 """
 Plot correlation functions
@@ -62,6 +62,11 @@ def plot(args):
             H5 = f.root
             param = H5.param
             dim = H5.param.mdsim._v_attrs.dimension
+            # obtain temperature from filename
+            m = re.search('_T(?P<temperature>[0-9].[0-9]+)_', fn)
+            if m:
+                temperature = float(m.group('temperature'))
+
             try:
                 if args.flavour:
                     H5 = H5._v_children[args.flavour]
@@ -152,7 +157,10 @@ def plot(args):
                         y, yerr = (y / y0), (yerr / y0)
 
                 if args.label:
-                    label = args.label[i % len(args.label)] % mdplot.label.attributes(param)
+                    dict = mdplot.label.attributes(param)
+                    dict['temperature'] = temperature
+                    dict['dataset'] = dset
+                    label = args.label[i % len(args.label)] % dict
                 elif args.legend or not args.small:
                     basen = os.path.splitext(os.path.basename(fn))[0]
                     label = r'%s:%s' % (dset, basen.replace('_', r'\_'))
