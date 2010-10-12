@@ -70,6 +70,19 @@ def plot(args):
                     data = H5._v_children['MSD']
                 elif dset in('DIFF2HELFAND', 'DIFFHELFAND'):
                     data = H5._v_children['HELFAND']
+                elif dset == 'NGP':
+                    # compute non-Gaussian parameter from MSD and MQD
+                    time = H5.MSD[..., 0]
+                    msd  = H5.MSD[..., 1]
+                    mqd  = H5.MQD[..., 1]
+                    msd_err = H5.MSD[..., 2]
+                    mqd_err = H5.MQD[..., 2]
+                    ngp = (dim/(dim + 2.)) * mqd / msd**2 - 1
+                    ngp_err = ngp * (msd_err / msd + 2 * mqd_err / mqd) # errors are not independent
+                    time.shape = append(time.shape, 1)
+                    ngp.shape = append(ngp.shape, 1)
+                    ngp_err.shape = append(ngp_err.shape, 1)
+                    data = concatenate((time, ngp, ngp_err), axis=2)
                 else:
                     data = H5._v_children[dset]
 
@@ -111,7 +124,7 @@ def plot(args):
                         y = y / y0
 
                 else:
-                    if dset.find('VAC_') == 0:
+                    if dset[0:4] == 'VAC_':
                         # select subset, discard threshold value
                         if args.subset == None:
                             raise SystemExit("Option --subset is mandatory for type '%s'" % dset)
@@ -246,6 +259,7 @@ def plot(args):
     ylabel = {
         'MSD': r'$\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
         'MQD': r'$\langle\delta r(t^*)^4\rangle\sigma^{-4}$',
+        'NGP': r'$\langle\delta \frac{d}{d+2} r(t^*)^4\rangle / \langle\delta r(t^*)^2\rangle^2 -1$',
         'DIFFMSD': r'$\frac{1}{2 d}\frac{d}{dt}\langle\delta r(t^*)^2\rangle\sigma^{-2}$',
         'DIFF2MSD': r'$\frac{1}{2}\frac{d^2}{dt^2}\langle\delta r(t^*)^2\rangle$',
         'VAC': r'$\langle v(t^*)v(0)\rangle$',
@@ -269,7 +283,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('corr', help='correlation functions')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 correlations file')
-    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'VAC', 'VAC_FASTEST', 'VAC_SLOWEST', 'VAC_MOBILE', 'VAC_IMMOBILE', 'STRESS', 'HELFAND', 'DIFFHELFAND', 'DIFF2HELFAND'], help='correlation function')
+    parser.add_argument('--type', nargs='+', choices=['MSD', 'DIFFMSD', 'DIFF2MSD', 'MQD', 'NGP', 'VAC', 'VAC_FASTEST', 'VAC_SLOWEST', 'VAC_MOBILE', 'VAC_IMMOBILE', 'STRESS', 'HELFAND', 'DIFFHELFAND', 'DIFF2HELFAND'], help='correlation function')
     parser.add_argument('--flavour', help='flavour of correlation functions, selects subgroup in HDF5 file')
     parser.add_argument('--subset', type=int, help='select subset of data (first index, for VAC_FASTEST etc.)')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
