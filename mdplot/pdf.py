@@ -51,44 +51,75 @@ def plot(args):
         # HDF5 root group
         H5 = f.root
 
+        # backwards compatibility
+        compatibility = 'file_version' not in H5.param._v_attrs
+        if compatibility:
+            print 'compatibility mode'
+
         try:
             try:
                 # particle positions of phase space sample
+                # possibly read several samples
+                trajectory = H5.trajectory
                 if args.flavour:
-                    r = H5.trajectory._v_children[args.flavour].r[args.sample]
+                    trajectory = trajectory._v_children[args.flavour]
+                if not compatibility:
+                    position = H5.trajectory.position
                 else:
-                    r = H5.trajectory.r[args.sample]
-                # simulation time
-                time = H5.trajectory.t[args.sample]
+                    position = H5.trajectory.r
+
+                idx = [int(x) for x in args.sample.split(':')]
+                if len(idx) == 1 :
+                    samples = array([position[idx[0]]])
+                elif len(idx) == 2:
+                    samples = position[idx[0]:idx[1]]
             except IndexError:
                 raise SystemExit('out-of-bounds phase space sample number')
 
-            # periodic simulation box length
-            box = H5.param.mdsim._v_attrs.box_length
-            # number of particles
-            N = H5.param.mdsim._v_attrs.particles
-            if not isscalar(N):
-                N = N[ord(args.flavour[:1]) - ord('A')]
+            if not compatibility:
+                # number of particles
+                N = H5.param.box._v_attrs.particles
+                if args.flavour:
+                    N = N[ord(args.flavour[:1]) - ord('A')]
+                else:
+                    N = N[0]
 
-            # positional coordinates dimension
-            dim = H5.param.mdsim._v_attrs.dimension
-            # particle density
-            density = H5.param.mdsim._v_attrs.density
+                # positional coordinates dimension
+                dim = H5.param.box._v_attrs.dimension
+                # box size
+                box = H5.param.box._v_attrs.length
+                # particle density
+                density = H5.param.box._v_attrs.density
+            else:
+                # number of particles
+                N = H5.param.mdsim._v_attrs.particles
+                if not isscalar(N):
+                    N = N[ord(args.flavour[:1]) - ord('A')]
 
-            cutoff = args.xlim or (0, box / 2)
+                # positional coordinates dimension
+                dim = H5.param.mdsim._v_attrs.dimension
+                # box size
+                box = H5.param.mdsim._v_attrs.box_length
+                box = zeros(dim) + box
+                # particle density
+                density = H5.param.mdsim._v_attrs.density
+
+            cutoff = args.xlim or (0, min(box) / 2)
             H = zeros(args.bins)
-            for (i, j) in enumerate(range(N - 1, 0, -1)):
-                # particle distance vectors
-                dr = r[:j] - r[i + 1:]
-                # minimum image distances
-                dr = dr - round_(dr / box) * box
-                # squared minimum image distances
-                rr = dr[:, 0] * dr[:, 0] + dr[:, 1] * dr[:, 1]
-                if dim == 3:
-                    rr = rr + dr[:, 2] * dr[:, 2]
-                # accumulate histogram of minimum image distances
-                h, bins = histogram(sqrt(rr), bins=args.bins, range=cutoff, new=True)
-                H = H + 2 * h
+            for r in samples:
+                for (i, j) in enumerate(range(N - 1, 0, -1)):
+                    # particle distance vectors
+                    dr = r[:j] - r[i + 1:]
+                    # minimum image distances
+                    dr = dr - round_(dr / box) * box
+                    # squared minimum image distances
+                    rr = dr[:, 0] * dr[:, 0] + dr[:, 1] * dr[:, 1]
+                    if dim == 3:
+                        rr = rr + dr[:, 2] * dr[:, 2]
+                    # accumulate histogram of minimum image distances
+                    h, bins = histogram(sqrt(rr), bins=args.bins, range=cutoff, new=True)
+                    H += 2 * h
+            H /= samples.shape[0]
 
             if args.label:
                 label = args.label[k % len(args.label)] % mdplot.label.attributes(H5.param)
@@ -133,9 +164,9 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('pdf', help='pair distribution function')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 trajectory file')
     parser.add_argument('--flavour', help='particle flavour')
-    parser.add_argument('--sample', type=int, help='phase space sample number')
+    parser.add_argument('--sample', help='index or range of phase space samples')
     parser.add_argument('--bins', type=int, help='number of histogram bins')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
-    parser.set_defaults(sample=-1, bins=100)
+    parser.set_defaults(sample='-1', bins=50)
 

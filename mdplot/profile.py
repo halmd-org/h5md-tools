@@ -49,6 +49,10 @@ def plot(args):
 
         # HDF5 root group
         H5 = f.root
+        # backwards compatibility
+        compatibility = 'file_version' not in H5.param._v_attrs
+        if compatibility:
+            print 'compatibility mode'
 
         try:
             try:
@@ -57,11 +61,10 @@ def plot(args):
                 trajectory = H5.trajectory
                 if args.flavour:
                     trajectory = trajectory._v_children[args.flavour]
-                # backwards compatibility
-                if "r" in trajectory._v_children:
-                    position = H5.trajectory.r
-                else:
+                if not compatibility:
                     position = H5.trajectory.position
+                else:
+                    position = H5.trajectory.r
 
                 idx = [int(x) for x in args.sample.split(':')]
                 if len(idx) == 1 :
@@ -71,26 +74,40 @@ def plot(args):
             except IndexError:
                 raise SystemExit('out-of-bounds phase space sample number')
 
-            # periodic simulation box length
-            box = H5.param.mdsim._v_attrs.box_length
-            # number of particles
-            N = H5.param.mdsim._v_attrs.particles
-            if not isscalar(N):
-                N = N[ord(args.flavour[:1]) - ord('A')]
+            if not compatibility:
+                # positional coordinates dimension
+                dim = H5.param.box._v_attrs.dimension
+                # particle density
+                density = H5.param.box._v_attrs.density
+                # periodic simulation box length
+                box = H5.param.box._v_attrs.length
+                # number of particles
+                N = H5.param.box._v_attrs.particles
+                if args.flavour:
+                    N = N[ord(args.flavour[:1]) - ord('A')]
+                else:
+                    N = N[0]
+            else:
+                # positional coordinates dimension
+                dim = H5.param.mdsim._v_attrs.dimension
+                # particle density
+                density = H5.param.mdsim._v_attrs.density
+                # periodic simulation box length
+                box = H5.param.mdsim._v_attrs.box_length
+                box = zeros(dim) + box
+                # number of particles
+                N = H5.param.mdsim._v_attrs.particles
+                if not isscalar(N):
+                    N = N[ord(args.flavour[:1]) - ord('A')]
 
-            # positional coordinates dimension
-            dim = H5.param.mdsim._v_attrs.dimension
-            # particle density
-            density = H5.param.mdsim._v_attrs.density
-
-            cutoff = args.xlim or (0, box)
+            cutoff = args.xlim or (0, box[args.axis])
             # minimum image distances
             x = samples[..., args.axis]
-            x = x - floor(x / box) * box
+            x = x - floor(x / box[args.axis]) * box[args.axis]
             histo, bins = histogram(x.flatten(), bins=args.bins, range=cutoff, new=True)
             # normalisation with volume of slabs (=bins) and number of samples,
             # the result is a local number density
-            histo = array(histo, dtype=float64) / (diff(bins) * pow(box, dim-1)) / samples.shape[0]
+            histo = array(histo, dtype=float64) / (diff(bins) * prod(box) / box[args.axis]) / samples.shape[0]
 
             if args.label:
                 label = args.label[k % len(args.label)] % mdplot.label.attributes(H5.param)

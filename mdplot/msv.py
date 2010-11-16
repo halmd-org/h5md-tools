@@ -109,9 +109,18 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f.root
+        # backwards compatibility
+        compatibility = 'file_version' not in H5.param._v_attrs
+        if compatibility:
+            print 'compatibility mode'
+
         try:
             # positional coordinates dimension
-            dim = H5.param.mdsim._v_attrs.dimension
+            if not compatibility:
+                dim = H5.param.box._v_attrs.dimension
+            else:
+                dim = H5.param.mdsim._v_attrs.dimension
+
             if dset == 'VZ' and dim == 3:
                 data = array(H5.VCM)
             else:
@@ -136,12 +145,16 @@ def plot(args):
             else:
                 y = data.flatten()
 
-            try:
-                version = H5.param.program._v_attrs.version
-                timestep = H5.param.mdsim._v_attrs.timestep
-            except tables.exceptions.NoSuchNodeError:
-                # backwards compatibility
-                version = 'unknown'
+            if compatibility:
+                try:
+                    version = H5.param.program._v_attrs.version
+                    timestep = H5.param.mdsim._v_attrs.timestep
+                except tables.exceptions.NoSuchNodeError:
+                    # backwards compatibility
+                    version = 'unknown'
+            else:
+                timestep = 0.01 # H5.param.mdsim.integrator._v_attrs.timestep
+                version = '~modular'
 
             # work around sampling bug yielding zero potential energy at time zero
             if dset in ('ETOT', 'EPOT', 'PRESS') and version < 'v0.2.1-21-g16e09fc':
