@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright © 2010  Felix Höfling
+#
+# compute time averages of macroscopic state variables
+# from .msv output file produced by HAL's MD package
+#
+
+from numpy import *
+from math import pi
+import tables, argparse
+#import sys
+
+def main():
+    # parse command line options
+    args = parse_args()
+
+    print '# Density  Cutoff  Temp  ΔT        E_pot     ΔEpot     Press   ΔP    E_pot (corr.)   Press (corr.)'
+
+    # equilibrium or stationary property
+    for i, fn in enumerate(args.input):
+        try:
+            f = tables.openFile(fn, mode='r')
+        except IOError:
+            raise SystemExit('failed to open HDF5 file: %s' % fn)
+
+        H5 = f.root
+        msv = dict()
+        try:
+            # read parameters
+            density = H5.param.box._v_attrs.density
+            cutoff = H5.param.lennard_jones._v_attrs.cutoff[0]
+
+            for dset in ('TEMP', 'PRESS', 'EPOT'): #, 'VCM', 'ETOT'):
+            # for dset,data in H5._v_leaves.items():
+                data = H5._v_leaves[dset]
+                skip = args.skip or 1
+                if len(data.shape) > 1:
+                    values = data[skip:, skip:]
+                else:
+                    values = data[skip:]
+
+                if dset == 'VCM':
+                    # calculate magnitude of center of mass velocity
+                    values = sqrt(sum(prod([values, values], axis=0), axis=1))
+
+                msv[dset.lower()] = [mean(values), std(values)]
+        except tables.exceptions.NoSuchNodeError:
+            raise SystemExit('missing simulation data in file: %s' % fn)
+
+        finally:
+            f.close()
+
+        print '%.4g  %.3g\t' % (density, cutoff),
+        for s in reversed(msv.keys()):
+#            print '%s = %.4g ± %.4g' % (s, msv[s][0], msv[s][1])
+            print '%.5g %.5g  ' % (msv[s][0], msv[s][1]),
+
+        rc3i = 1 / pow(cutoff, 3)
+        en_corr = (8./9) * pi * density * (rc3i * rc3i - 3.) * rc3i
+        press_corr = (32./9) * pi * pow(density, 2) * (rc3i * rc3i - 1.5) * rc3i
+        print '%.5g  ' % (msv['epot'][0] + en_corr),
+        print '%.5g  ' % (msv['press'][0] + press_corr)
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog='compute_msv')
+    parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 .msv file')
+    parser.add_argument('--skip', type=int, help='number of data points to skip from the beginning')
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    main()
