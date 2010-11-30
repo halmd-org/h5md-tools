@@ -12,11 +12,24 @@ from math import pi
 import tables, argparse
 #import sys
 
+#labels = (
+#    'TEMP': 'temperature',
+#    'PRESS': 'pressure',
+#    'ETOT': '
+
 def main():
     # parse command line options
     args = parse_args()
 
-    print '# Density  Cutoff  Temp  ΔT        E_pot     ΔEpot     Press   ΔP    E_pot (corr.)   Press (corr.)'
+    # construct header of table
+    if args.table:
+        header = '# Density  Cutoff   '
+        for dset in args.datasets:
+            name = dset[0].upper() + dset[1:].lower()
+            header = header + name + '  err(' + name + ')   '
+            name = 'Δ' + name
+            header = header + name + '  err(' + name + ')   '
+        print header
 
     # equilibrium or stationary property
     for i, fn in enumerate(args.input):
@@ -26,47 +39,99 @@ def main():
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f.root
-        msv = dict()
+        msv_mean = dict()      # mean values of observable
+        msv_std = dict()       # standard deviation of observable (fluctuations)
         try:
             # read parameters
             density = H5.param.box._v_attrs.density
             cutoff = H5.param.lennard_jones._v_attrs.cutoff[0]
 
-            for dset in ('TEMP', 'PRESS', 'EPOT'): #, 'VCM', 'ETOT'):
-            # for dset,data in H5._v_leaves.items():
+            if args.table:
+                print '%.4g  %.3g\t' % (density, cutoff),
+            else:
+                print 'Filename: %s' % fn
+                print 'Cutoff: %.3g' % cutoff
+                print 'Density: %.4g' % density
+
+            # iterate over datasets
+            for dset in args.datasets:
                 data = H5._v_leaves[dset]
-                skip = args.skip or 1
+
+                # skip first number of values
                 if len(data.shape) > 1:
-                    values = data[skip:, skip:]
+                    values = data[args.skip:, args.skip:]
                 else:
-                    values = data[skip:]
+                    values = data[args.skip:]
 
                 if dset == 'VCM':
                     # calculate magnitude of center of mass velocity
                     values = sqrt(sum(prod([values, values], axis=0), axis=1))
 
-                msv[dset.lower()] = [mean(values), std(values)]
+                # compute error from different blocks
+                # divide data in blocks
+                if len(values) > args.blocks:
+                    # cut size of data to a multiple of args.blocks
+                    a = int(args.blocks * floor(len(values) / args.blocks))
+                    values = reshape(values[:a], (args.blocks, -1))
+                else:
+                    values = reshape(values, (1, -1))
+
+                # compute mean and standard deviation as well as error estimates
+                mean_values = [
+                    mean(values),
+                    std(mean(values, axis=1)) / sqrt(args.blocks - 1)
+                ]
+                std_values = [
+                    std(values),
+                    std(std(values, axis=1)) / sqrt(args.blocks - 1)
+                ]
+
+                if args.table:
+                    print '%.5g %.5g  ' % (mean_values[0], mean_values[1]),
+                    print '%.5g %.5g  ' % (std_values[0], std_values[1]),
+                else:
+                    try:
+                        desc = H5._v_leaves[dset]._v_attrs.description
+                    except tables.exceptions.NoSuchNodeError:
+                        desc = dset.lower()
+                    print '%s: %.4g ± %.3g' % (desc.capitalize(), mean_values[0], mean_values[1])
+                    print '  Δ%s: %.4g ± %.3g' % (dset.capitalize(), std_values[0], std_values[1])
+
+                # store in dictionary for later use
+                msv_mean[dset] = mean_values
+                msv_std[dset] = std_values
+
+            # tail correction for truncated Lennard-Jones potential
+            if False:
+                rc3i = 1 / pow(cutoff, 3)
+                en_corr = (8./9) * pi * density * (rc3i * rc3i - 3.) * rc3i
+                press_corr = (32./9) * pi * pow(density, 2) * (rc3i * rc3i - 1.5) * rc3i
+                print '%.5g  ' % (msv['EPOT'][0] + en_corr),
+                print '%.5g  ' % (msv['PRESS'][0] + press_corr)
+
+            # finish output line
+            print
+
         except tables.exceptions.NoSuchNodeError:
-            raise SystemExit('missing simulation data in file: %s' % fn)
+            print 'missing simulation data in file: %s' % fn
+            print 'Skipped\n'
 
         finally:
             f.close()
 
-        print '%.4g  %.3g\t' % (density, cutoff),
-        for s in reversed(msv.keys()):
-#            print '%s = %.4g ± %.4g' % (s, msv[s][0], msv[s][1])
-            print '%.5g %.5g  ' % (msv[s][0], msv[s][1]),
-
-        rc3i = 1 / pow(cutoff, 3)
-        en_corr = (8./9) * pi * density * (rc3i * rc3i - 3.) * rc3i
-        press_corr = (32./9) * pi * pow(density, 2) * (rc3i * rc3i - 1.5) * rc3i
-        print '%.5g  ' % (msv['epot'][0] + en_corr),
-        print '%.5g  ' % (msv['press'][0] + press_corr)
-
 def parse_args():
     parser = argparse.ArgumentParser(prog='compute_msv')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 .msv file')
+    parser.add_argument('--datasets', metavar='NAME', nargs='+', help='list of data sets')
+    parser.add_argument('--blocks', type=int, help='number of blocks for error estimate')
     parser.add_argument('--skip', type=int, help='number of data points to skip from the beginning')
+    parser.add_argument('--table', action='store_true', help='output results in table format')
+    parser.set_defaults(
+        datasets=('TEMP', 'PRESS', 'EPOT'),
+        blocks=10,
+        skip=0,
+        tables=False,
+    )
     return parser.parse_args()
 
 if __name__ == '__main__':
