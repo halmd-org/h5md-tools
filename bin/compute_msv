@@ -127,6 +127,8 @@ def main():
                 # specific heat in microcanonical ensemble (NVE)
                 if args.ensemble == 'nve' and 'TEMP' in msv_mean.keys():
                     DeltaT_over_T = msv_std['TEMP'][0] / msv_mean['TEMP'][0]
+                    DeltaT_err = msv_std['TEMP'][1]
+                    temp_err = msv_mean['TEMP'][1]
                     coeff['c_V'] = [
                         1 / (2./3 - npart * pow(DeltaT_over_T, 2)),
                         0    # error estimate
@@ -135,10 +137,13 @@ def main():
                 # specific heat in canonical ensemble (NVT)
                 if args.ensemble == 'nvt' and set(('TEMP','EPOT')).issubset(msv_mean.keys()):
                     temp = msv_mean['TEMP'][0]
+                    temp_err = msv_mean['TEMP'][1]
                     Delta_Epot = msv_std['EPOT'][0]
+                    Delta_Epot_err = msv_std['EPOT'][1]
+                    Cv_ = npart * pow(Delta_Epot/temp, 2)
                     coeff['c_V'] = [
-                        .5 * dimension + pow(Delta_Epot / temp, 2) * npart,
-                        0    # error estimate
+                        .5 * dimension + Cv_,
+                        Cv_ * sqrt(pow(2 * temp_err / temp, 2) + pow(2 * Delta_Epot_err / Delta_Epot, 2))     # error estimate
                     ]
 
                 for name in coeff.keys():
