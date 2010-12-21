@@ -12,10 +12,10 @@ from math import pi
 import tables, argparse
 #import sys
 
-#labels = (
-#    'TEMP': 'temperature',
-#    'PRESS': 'pressure',
-#    'ETOT': '
+description = {
+    'c_V': 'specific heat c_V',
+    'chi_T': 'compressibility chi_T',
+}
 
 def main():
     # parse command line options
@@ -29,6 +29,16 @@ def main():
             header = header + name + '  err(' + name + ')   '
             name = 'Δ' + name
             header = header + name + '  err(' + name + ')   '
+
+        # optional response coefficients
+        coeff = []
+        if args.ensemble == 'nve':
+            'TEMP' in args.datasets and coeff.append('c_V')
+        elif args.ensemble == 'nvt':
+            set(('TEMP','EPOT')).issubset(args.datasets) and coeff.append('c_V')
+        for name in coeff:
+            header = header + name + '  err(' + name + ')   '
+
         print header
 
     # equilibrium or stationary property
@@ -43,7 +53,9 @@ def main():
         msv_std = dict()       # standard deviation of observable (fluctuations)
         try:
             # read parameters
+            dimension = H5.param.box._v_attrs.dimension
             density = H5.param.box._v_attrs.density
+            npart = sum(H5.param.box._v_attrs.particles)
             cutoff = H5.param.lennard_jones._v_attrs.cutoff[0]
 
             if args.table:
@@ -87,8 +99,8 @@ def main():
                 ]
 
                 if args.table:
-                    print '%.5g %.5g  ' % (mean_values[0], mean_values[1]),
-                    print '%.5g %.5g  ' % (std_values[0], std_values[1]),
+                    print '%.5g %.5g  ' % tuple(mean_values),
+                    print '%.5g %.5g  ' % tuple(std_values),
                 else:
                     try:
                         desc = H5._v_leaves[dset]._v_attrs.description
@@ -102,12 +114,39 @@ def main():
                 msv_std[dset] = std_values
 
             # tail correction for truncated Lennard-Jones potential
-            if False:
+            if False:  # disabled
                 rc3i = 1 / pow(cutoff, 3)
                 en_corr = (8./9) * pi * density * (rc3i * rc3i - 3.) * rc3i
                 press_corr = (32./9) * pi * pow(density, 2) * (rc3i * rc3i - 1.5) * rc3i
-                print '%.5g  ' % (msv['EPOT'][0] + en_corr),
-                print '%.5g  ' % (msv['PRESS'][0] + press_corr)
+                print '%.5g  ' % (msv_mean['EPOT'][0] + en_corr),
+                print '%.5g  ' % (msv_mean['PRESS'][0] + press_corr)
+
+            # compute response coefficients
+            if args.ensemble:
+                coeff = {}
+                # specific heat in microcanonical ensemble (NVE)
+                if args.ensemble == 'nve' and 'TEMP' in msv_mean.keys():
+                    DeltaT_over_T = msv_std['TEMP'][0] / msv_mean['TEMP'][0]
+                    coeff['c_V'] = [
+                        1 / (2./3 - npart * pow(DeltaT_over_T, 2)),
+                        0    # error estimate
+                    ]
+
+                # specific heat in canonical ensemble (NVT)
+                if args.ensemble == 'nvt' and set(('TEMP','EPOT')).issubset(msv_mean.keys()):
+                    temp = msv_mean['TEMP'][0]
+                    Delta_Epot = msv_std['EPOT'][0]
+                    coeff['c_V'] = [
+                        .5 * dimension + pow(Delta_Epot / temp, 2) * npart,
+                        0    # error estimate
+                    ]
+
+                for name in coeff.keys():
+                    if args.table:
+                        print '%.5g %.5g  ' % tuple(coeff[name])
+                    else:
+                        desc = description[name].capitalize()
+                        print '%s: %.4g ± %.3g' % (desc, coeff[name][0], coeff[name][1])
 
             # finish output line
             print
@@ -126,6 +165,7 @@ def parse_args():
     parser.add_argument('--blocks', type=int, help='number of blocks for error estimate')
     parser.add_argument('--skip', type=int, help='number of data points to skip from the beginning')
     parser.add_argument('--table', action='store_true', help='output results in table format')
+    parser.add_argument('--ensemble', metavar='TYPE', choices=['nvt', 'nve'], help='compute response coefficients for specified ensemble')
     parser.set_defaults(
         datasets=('TEMP', 'PRESS', 'EPOT'),
         blocks=10,
