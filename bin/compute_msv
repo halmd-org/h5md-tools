@@ -13,8 +13,8 @@ import tables, argparse
 #import sys
 
 description = {
-    'c_V': 'specific heat c_V',
-    'chi_T': 'compressibility chi_T',
+    'c_V': 'isochoric specific heat',
+    'chi_T': 'isothermal compressibility',
 }
 
 def main():
@@ -143,7 +143,7 @@ def main():
 
                 for name in coeff.keys():
                     if args.table:
-                        print '%.5g %.5g  ' % tuple(coeff[name])
+                        print '%.5g %.5g  ' % tuple(coeff[name]),
                     else:
                         desc = description[name].capitalize()
                         print '%s: %.4g ± %.3g' % (desc, coeff[name][0], coeff[name][1])
