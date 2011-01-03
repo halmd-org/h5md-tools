@@ -328,5 +328,5 @@ def add_parser(subparsers):
     parser.add_argument('--block-size', type=int, help='block size to be used for CUDA calls')
     parser.add_argument('--profiling', action='store_true', help='output profiling results and compare with host version')
     parser.add_argument('--verbose', action='store_true')
-    parser.set_defaults(sample='0', q_limit=25, q_error=0.1, block_size=256)
+    parser.set_defaults(sample='0', q_limit=15, q_error=0.1, block_size=256)
 
