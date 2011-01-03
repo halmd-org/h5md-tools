@@ -191,8 +191,10 @@ def plot(args):
         if args.dump:
             f = open(args.dump, 'a')
             print >>f, '# %s' % label.replace(r'\_', '_')
+            print >>f, '# q   S_q'
             savetxt(f, array((q_range, S_q)).T)
             print >>f, '\n'
+            f.close()
 
     # optionally plot power laws
     if args.power_law:
