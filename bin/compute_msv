@@ -15,6 +15,7 @@ import tables, argparse
 description = {
     'c_V': 'isochoric specific heat',
     'chi_T': 'isothermal compressibility',
+    'chi_S': 'adiabatic compressibility',
 }
 
 def main():
@@ -34,8 +35,10 @@ def main():
         coeff = []
         if args.ensemble == 'nve':
             'TEMP' in args.datasets and coeff.append('c_V')
+            set(('TEMP','PRESS','XVIR')).issubset(args.datasets) and coeff.append('chi_S')
         elif args.ensemble == 'nvt':
             set(('TEMP','EPOT')).issubset(args.datasets) and coeff.append('c_V')
+            set(('TEMP','PRESS','XVIR')).issubset(args.datasets) and coeff.append('chi_T')
         for name in coeff:
             header = header + name + '  err(' + name + ')   '
 
@@ -124,7 +127,7 @@ def main():
             # compute response coefficients
             if args.ensemble:
                 coeff = {}
-                # specific heat in microcanonical ensemble (NVE)
+                # specific heat in the microcanonical ensemble (NVE)
                 if args.ensemble == 'nve' and 'TEMP' in msv_mean.keys():
                     DeltaT_over_T = msv_std['TEMP'][0] / msv_mean['TEMP'][0]
                     DeltaT_err = msv_std['TEMP'][1]
@@ -134,7 +137,7 @@ def main():
                         0    # error estimate
                     ]
 
-                # specific heat in canonical ensemble (NVT)
+                # specific heat in the canonical ensemble (NVT)
                 if args.ensemble == 'nvt' and set(('TEMP','EPOT')).issubset(msv_mean.keys()):
                     temp = msv_mean['TEMP'][0]
                     temp_err = msv_mean['TEMP'][1]
@@ -144,6 +147,30 @@ def main():
                     coeff['c_V'] = [
                         .5 * dimension + Cv_,
                         Cv_ * sqrt(pow(2 * temp_err / temp, 2) + pow(2 * Delta_Epot_err / Delta_Epot, 2))     # error estimate
+                    ]
+
+                # adiabatic compressibility in the microcanonical ensemble (NVE)
+                if args.ensemble == 'nve' and set(('TEMP','PRESS','XVIR')).issubset(msv_mean.keys()):
+                    temp = msv_mean['TEMP'][0]
+                    press = msv_mean['PRESS'][0]
+                    DeltaP = msv_std['PRESS'][0]
+                    hypervirial = msv_mean['XVIR'][0]
+                    coeff['chi_S'] = [
+                        1 / (2. / dimension * temp * density + press + hypervirial
+                             - DeltaP * DeltaP * npart / density / temp),
+                        0    # error estimate
+                    ]
+
+                # isothermal compressibility in the canonical ensemble (NVT)
+                if args.ensemble == 'nvt' and set(('TEMP','PRESS','XVIR')).issubset(msv_mean.keys()):
+                    temp = msv_mean['TEMP'][0]
+                    press = msv_mean['PRESS'][0]
+                    DeltaP = msv_std['PRESS'][0]
+                    hypervirial = msv_mean['XVIR'][0]
+                    coeff['chi_T'] = [
+                        1 / (2. / dimension * temp * density + press + hypervirial
+                             - DeltaP * DeltaP * npart / density / temp),
+                        0    # error estimate
                     ]
 
                 for name in coeff.keys():

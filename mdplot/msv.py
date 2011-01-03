@@ -88,6 +88,13 @@ def plot(args):
             r'$(\langle v_z^*(t^*)\rangle - \langle v_z^*(0)\rangle) / \delta t^2$',
             r'$\langle v_z^*(t^*)\rangle - \langle v_z^*(0)\rangle$',
         ],
+        'XVIR': [
+            r'$\langle X^*(t^*)\rangle$',
+            r'$\langle\langle X^*\rangle\rangle_{t^*}$',
+            r'$\sigma_{\langle X^*\rangle}$',
+            r'$(\langle X^*(t^*)\rangle - \langle X^*(0)\rangle) / \delta t^2$',
+            r'$\langle X^*(t^*)\rangle - \langle X^*(0)\rangle$',
+        ],
     }
 
     ax = plot.axes()
@@ -271,7 +278,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('msv', help='macroscopic state variables')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='MSV file in HDF5 format')
-    parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM', 'VZ'], help='equilibrium or stationary property')
+    parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM', 'VZ', 'XVIR'], help='equilibrium or stationary property')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
