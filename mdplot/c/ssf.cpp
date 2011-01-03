@@ -25,15 +25,15 @@
 #include <numpy/ndarrayobject.h>
 
 // forward declaration
-bool is_double_matrix(PyArrayObject *a);
+bool is_float_matrix(PyArrayObject *a);
 
 PyObject *_static_structure_factor(PyObject *self, PyObject *args)
 {
     PyArrayObject *q, *r;
 
     if (!PyArg_ParseTuple(args, "O!O!", &PyArray_Type, &q, &PyArray_Type, &r)
-            || q == NULL || !is_double_matrix(q)
-            || r == NULL || !is_double_matrix(r))  {
+            || q == NULL || !is_float_matrix(q)
+            || r == NULL || !is_float_matrix(r))  {
         return NULL;
     }
 
@@ -58,9 +58,9 @@ PyObject *_static_structure_factor(PyObject *self, PyObject *args)
 #       pragma omp parallel for reduction(+:sin_sum,cos_sum)
         for (unsigned j=0; j < npart; j++) {
             // q_r = inner(q, r)
-            double q_r = 0;
+            float q_r = 0;
             for (unsigned k=0; k < dimension; k++) {
-                q_r += *(double*)PyArray_GETPTR2(q, i, k) * *(double*)PyArray_GETPTR2(r, j, k);
+                q_r += *(float*)PyArray_GETPTR2(q, i, k) * *(float*)PyArray_GETPTR2(r, j, k);
             }
             // on old platforms/compilers one may prefer sincos(q_r, &s, &c)
             sin_sum += sinf(q_r);  // single precision should be sufficient here
@@ -77,8 +77,8 @@ PyObject *_static_structure_factor(PyObject *self, PyObject *args)
     return Py_BuildValue("d", result);
 }
 
-bool is_double_matrix(PyArrayObject *a)
-{   if (PyArray_TYPE(a) != NPY_DOUBLE || a->nd != 2)
+bool is_float_matrix(PyArrayObject *a)
+{   if (PyArray_TYPE(a) != NPY_FLOAT || a->nd != 2)
     {
         PyErr_SetString(PyExc_ValueError,
             "array must be of type Float and 2-dimensional.");

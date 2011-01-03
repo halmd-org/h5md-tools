@@ -53,11 +53,21 @@ def plot(args):
 
         H5 = f.root
         param = H5.param
+
+        # backwards compatibility
+        compatibility = 'file_version' not in param._v_attrs
+        if compatibility:
+            print 'compatibility mode'
+
         try:
             if args.flavour:
-                samples = H5.trajectory._v_children[args.flavour].r
+                samples = H5.trajectory._v_children[args.flavour]
             else:
-                samples = H5.trajectory.r
+                samples = H5.trajectory
+            if not compatibility:
+                samples = samples.position
+            else:
+                samples = samples.r
 
             # periodically extended particle positions
             # possibly read several samples
@@ -66,12 +76,24 @@ def plot(args):
                 samples = array([samples[idx[0]]])
             elif len(idx) == 2:
                 samples = samples[idx[0]:idx[1]]
-            # periodic simulation box length
-            L = param.mdsim._v_attrs.box_length
-            # number of particles
-            N = sum(param.mdsim._v_attrs.particles)
-            # positional coordinates dimension
-            dim = param.mdsim._v_attrs.dimension
+
+            if not compatibility:
+                # positional coordinates dimension
+                dim = param.box._v_attrs.dimension
+                # periodic simulation box length
+                L = param.box._v_attrs.length
+                if min(L) != max(L):
+                    raise SystemExit('can\'t handle non-cubic simulation boxes')
+                L = L[0]
+                # number of particles
+                N = sum(param.box._v_attrs.particles)
+            else:
+                # positional coordinates dimension
+                dim = param.mdsim._v_attrs.dimension
+                # periodic simulation box length
+                L = param.mdsim._v_attrs.box_length
+                # number of particles
+                N = sum(param.mdsim._v_attrs.particles)
 
             # store attributes for later use before closing the file
             attrs = mdplot.label.attributes(param)
@@ -84,14 +106,18 @@ def plot(args):
             f.close()
 
         # reciprocal lattice distance
-        q_min = (2 * pi / L)
+        q_min = float32(2 * pi / L)
         # number of values for |q|
         nq = int(args.q_limit / q_min)
         # absolute deviation of |q|
         q_err = q_min * args.q_error
 
         # generate n-dimensional q-grid
-        q_grid = q_min * squeeze(dstack(reshape(indices(repeat(nq + 1, dim)), (dim, -1))))
+        q_grid = q_min * squeeze(dstack(
+                    reshape(
+                        indices(repeat(nq + 1, dim), dtype=float32)
+                      , (dim, -1)
+                    )))
         # compute absolute |q| values of q-grid
         q_norm = sqrt(sum(q_grid * q_grid, axis=1))
 
