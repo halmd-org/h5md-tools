@@ -129,12 +129,15 @@ def main():
                 coeff = {}
                 # specific heat in the microcanonical ensemble (NVE)
                 if args.ensemble == 'nve' and 'TEMP' in msv_mean.keys():
-                    DeltaT_over_T = msv_std['TEMP'][0] / msv_mean['TEMP'][0]
-                    DeltaT_err = msv_std['TEMP'][1]
+                    temp = msv_mean['TEMP'][0]
                     temp_err = msv_mean['TEMP'][1]
+                    DeltaT = msv_std['TEMP'][0]
+                    DeltaT_err = msv_std['TEMP'][1]
+                    x =  npart * pow(DeltaT / temp, 2)
                     coeff['c_V'] = [
-                        1 / (2./3 - npart * pow(DeltaT_over_T, 2)),
-                        0    # error estimate
+                        1 / (2./3 - x),
+                        # error estimate
+                        x * sqrt(pow(2 * DeltaT_err / DeltaT, 2) + pow(2 * temp_err / temp, 2))
                     ]
 
                 # specific heat in the canonical ensemble (NVT)
@@ -146,32 +149,39 @@ def main():
                     Cv_ = npart * pow(Delta_Epot/temp, 2)
                     coeff['c_V'] = [
                         .5 * dimension + Cv_,
-                        Cv_ * sqrt(pow(2 * temp_err / temp, 2) + pow(2 * Delta_Epot_err / Delta_Epot, 2))     # error estimate
+                        Cv_ * sqrt(
+                            pow(2 * temp_err / temp, 2)
+                          + pow(2 * Delta_Epot_err / Delta_Epot, 2)
+                        )     # error estimate
                     ]
 
                 # adiabatic compressibility in the microcanonical ensemble (NVE)
-                if args.ensemble == 'nve' and set(('TEMP','PRESS','XVIR')).issubset(msv_mean.keys()):
-                    temp = msv_mean['TEMP'][0]
-                    press = msv_mean['PRESS'][0]
-                    DeltaP = msv_std['PRESS'][0]
-                    hypervirial = msv_mean['XVIR'][0]
-                    coeff['chi_S'] = [
-                        1 / (2. / dimension * temp * density + press + hypervirial
-                             - DeltaP * DeltaP * npart / density / temp),
-                        0    # error estimate
-                    ]
-
                 # isothermal compressibility in the canonical ensemble (NVT)
-                if args.ensemble == 'nvt' and set(('TEMP','PRESS','XVIR')).issubset(msv_mean.keys()):
+                # 
+                # the formulae look the same, but the interpretation is different
+                if args.ensemble and set(('TEMP','PRESS','XVIR')).issubset(msv_mean.keys()):
                     temp = msv_mean['TEMP'][0]
+                    temp_err = msv_mean['TEMP'][1]
                     press = msv_mean['PRESS'][0]
+                    press_err = msv_mean['PRESS'][1]
                     DeltaP = msv_std['PRESS'][0]
+                    DeltaP_err = msv_std['PRESS'][1]
                     hypervirial = msv_mean['XVIR'][0]
-                    coeff['chi_T'] = [
-                        1 / (2. / dimension * temp * density + press + hypervirial
-                             - DeltaP * DeltaP * npart / density / temp),
-                        0    # error estimate
-                    ]
+                    hypervirial_err = msv_mean['XVIR'][1]
+                    x = pow(DeltaP, 2) * npart / density / temp
+                    # compressibility
+                    chi = 1 / (2. / dimension * temp * density + press + hypervirial * density - x)
+                    # error estimate
+                    chi_err = pow(chi, 2) * sqrt(
+                        pow((2. / dimension * density + x / temp) * temp_err, 2)
+                      + pow(press_err, 2)
+                      + pow(hypervirial_err * density, 2)
+                      + pow(2 * x * DeltaP_err / DeltaP, 2)
+                    )
+                    if args.ensemble == 'nve':
+                        coeff['chi_S'] = [chi, chi_err]
+                    elif args.ensemble == 'nvt':
+                        coeff['chi_T'] = [chi, chi_err]
 
                 for name in coeff.keys():
                     if args.table:
