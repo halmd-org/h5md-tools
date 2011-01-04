@@ -73,44 +73,50 @@ def main():
                 data = H5._v_leaves[dset]
 
                 # skip first number of values
-                if len(data.shape) > 1:
-                    values = data[args.skip:, args.skip:]
-                else:
-                    values = data[args.skip:]
-
-                if dset == 'VCM':
-                    # calculate magnitude of center of mass velocity
-                    values = sqrt(sum(prod([values, values], axis=0), axis=1))
+                values = data[args.skip:]
 
                 # compute error from different blocks
-                # divide data in blocks
-                if len(values) > args.blocks:
+                # divide data in blocks, support tensor data as well
+                shape = list(values.shape)
+                if shape[0] > args.blocks:
                     # cut size of data to a multiple of args.blocks
-                    a = int(args.blocks * floor(len(values) / args.blocks))
-                    values = reshape(values[:a], (args.blocks, -1))
+                    a = int(args.blocks * floor(shape[0] / args.blocks))
+                    values = values[:a]
+                    shape[0] = args.blocks
+                    shape.insert(1, -1)
                 else:
-                    values = reshape(values, (1, -1))
+                    shape[0] = 1
+                    shape.insert(1, -1)
+                values = reshape(values, shape)
 
                 # compute mean and standard deviation as well as error estimates
                 mean_values = [
-                    mean(values),
-                    std(mean(values, axis=1)) / sqrt(args.blocks - 1)
+                    mean(mean(values, axis=1), axis=0),
+                    std(mean(values, axis=1), axis=0) / sqrt(args.blocks - 1)
                 ]
+                # compute std dev for data from all blocks
+                shape = concatenate(([shape[0] * shape[1]], shape[2:]))
                 std_values = [
-                    std(values),
-                    std(std(values, axis=1)) / sqrt(args.blocks - 1)
+                    std(reshape(values, shape), axis=0),        # independent of args.blocks
+#                    sqrt(mean(var(values, axis=1), axis=0)),   # this yields a different result
+#                    mean(std(values, axis=1), axis=0),         # this one too
+                    std(std(values, axis=1), axis=0) / sqrt(args.blocks - 1)
                 ]
 
                 if args.table:
-                    print '%.5g %.5g  ' % tuple(mean_values),
-                    print '%.5g %.5g  ' % tuple(std_values),
+                    print '{0:.5g} {1:.5g}  '.format(*mean_values),
+                    print '{0:.5g} {1:.5g}  '.format(*std_values),
                 else:
                     try:
                         desc = H5._v_leaves[dset]._v_attrs.description
                     except tables.exceptions.NoSuchNodeError:
                         desc = dset.lower()
-                    print '%s: %.4g ± %.3g' % (desc.capitalize(), mean_values[0], mean_values[1])
-                    print '  Δ%s: %.4g ± %.3g' % (dset.capitalize(), std_values[0], std_values[1])
+                    print '{0:s}: {1:.4g} ± {2:.3g}'.format(
+                        desc.capitalize(), mean_values[0], mean_values[1]
+                    )
+                    print '  Δ{0:s}: {1:.4g} ± {2:.3g}'.format(
+                        dset.capitalize(), std_values[0], std_values[1]
+                    )
 
                 # store in dictionary for later use
                 msv_mean[dset] = mean_values
@@ -185,10 +191,10 @@ def main():
 
                 for name in coeff.keys():
                     if args.table:
-                        print '%.5g %.5g  ' % tuple(coeff[name]),
+                        print '{0:.5g} {1:.5g}  '.format(*coeff[name]),
                     else:
                         desc = description[name].capitalize()
-                        print '%s: %.4g ± %.3g' % (desc, coeff[name][0], coeff[name][1])
+                        print '{0:s}: {1:.4g} ± {2:.3g}'.format(desc, coeff[name][0], coeff[name][1])
 
             # finish output line
             print
