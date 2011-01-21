@@ -22,25 +22,32 @@ def main():
     # parse command line options
     args = parse_args()
 
+    # optional response coefficients
+    coeff = {}
+    if args.ensemble == 'nve':
+        'TEMP' in args.datasets and coeff.update({'c_V': []})
+        set(('TEMP','PRESS','XVIR')).issubset(args.datasets) and coeff.update({'chi_S': []})
+    elif args.ensemble == 'nvt':
+        set(('TEMP','EPOT')).issubset(args.datasets) and coeff.update({'c_V': []})
+        set(('TEMP','PRESS','XVIR')).issubset(args.datasets) and coeff.update({'chi_T': []})
+
     # construct header of table
     if args.table:
-        header = '# Density  Cutoff   '
-        for dset in args.datasets:
+        header = '# 1:Density  2:Cutoff   '
+        col = 3
+        for (i,dset) in enumerate(args.datasets):
             name = dset[0].upper() + dset[1:].lower()
-            header = header + name + '  err(' + name + ')   '
+            header = header + '{0:d}:'.format(col) + name
+            header = header + '  {0:d}:err('.format(col + 1) + name + ')   '
             name = 'Δ' + name
-            header = header + name + '  err(' + name + ')   '
+            header = header + '{0:d}:'.format(col + 2) + name
+            header = header + '  {0:d}:err('.format(col + 3) + name + ')   '
+            col += 4
 
-        # optional response coefficients
-        coeff = []
-        if args.ensemble == 'nve':
-            'TEMP' in args.datasets and coeff.append('c_V')
-            set(('TEMP','PRESS','XVIR')).issubset(args.datasets) and coeff.append('chi_S')
-        elif args.ensemble == 'nvt':
-            set(('TEMP','EPOT')).issubset(args.datasets) and coeff.append('c_V')
-            set(('TEMP','PRESS','XVIR')).issubset(args.datasets) and coeff.append('chi_T')
-        for name in coeff:
-            header = header + name + '  err(' + name + ')   '
+        for name in coeff.keys():
+            header = header + '{0:d}:'.format(col) + name
+            header = header + '  {0:d}:err('.format(col + 1) + name + ')   '
+            col += 2
 
         print header
 
@@ -132,9 +139,8 @@ def main():
 
             # compute response coefficients
             if args.ensemble:
-                coeff = {}
                 # specific heat in the microcanonical ensemble (NVE)
-                if args.ensemble == 'nve' and 'TEMP' in msv_mean.keys():
+                if 'c_V' in coeff.keys() and args.ensemble == 'nve':
                     temp = msv_mean['TEMP'][0]
                     temp_err = msv_mean['TEMP'][1]
                     DeltaT = msv_std['TEMP'][0]
@@ -147,7 +153,7 @@ def main():
                     ]
 
                 # specific heat in the canonical ensemble (NVT)
-                if args.ensemble == 'nvt' and set(('TEMP','EPOT')).issubset(msv_mean.keys()):
+                if 'c_V' in coeff.keys() and args.ensemble == 'nvt':
                     temp = msv_mean['TEMP'][0]
                     temp_err = msv_mean['TEMP'][1]
                     Delta_Epot = msv_std['EPOT'][0]
@@ -165,7 +171,7 @@ def main():
                 # isothermal compressibility in the canonical ensemble (NVT)
                 # 
                 # the formulae look the same, but the interpretation is different
-                if args.ensemble and set(('TEMP','PRESS','XVIR')).issubset(msv_mean.keys()):
+                if not set(('chi_S','chi_T')).isdisjoint(coeff.keys()):
                     temp = msv_mean['TEMP'][0]
                     temp_err = msv_mean['TEMP'][1]
                     press = msv_mean['PRESS'][0]
