@@ -49,7 +49,7 @@ def main():
             header = header + '  {0:d}:err('.format(col + 1) + name + ')   '
             col += 2
 
-        print header
+        print header[:-2]
 
     # equilibrium or stationary property
     for i, fn in enumerate(args.input):
@@ -201,6 +201,8 @@ def main():
                     else:
                         desc = description[name].capitalize()
                         print '{0:s}: {1:.4g} ± {2:.3g}'.format(desc, coeff[name][0], coeff[name][1])
+                    # clear data after output
+                    coeff[name] = []
 
             # finish output line
             print
