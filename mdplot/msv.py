@@ -60,6 +60,13 @@ def plot(args):
             r'$(\langle T(t^*)\rangle - \langle T(0)\rangle) / (\delta t^2\epsilon)$',
             r'$(\langle T(t^*)\rangle - \langle T(0)\rangle) / \epsilon$',
         ],
+        'ENHC': [
+            r'$\langle E_\text{NHC}(t^*)\rangle / \epsilon$',
+            r'$\langle\langle E_\text{NHC}\rangle\rangle_{t^*}$',
+            r'$\sigma_{\langle E_\text{NHC}\rangle}$',
+            r'$(\langle E_\text{NHC}(t^*)\rangle - \langle E_\text{NHC}(0)\rangle) / (\delta t^2\epsilon)$',
+            r'$(\langle E_\text{NHC}(t^*)\rangle - \langle E_\text{NHC}(0)\rangle) / \epsilon$',
+        ],
         'PRESS': [
             r'$P^*(t^*)$',
             r'$\langle\langle P^*\rangle\rangle_{t^*}$',
@@ -132,6 +139,10 @@ def plot(args):
                 data = array(H5.VCM)
             else:
                 data = array(H5._v_children[dset])
+
+            # add total energy to energy of chain variables
+            if dset == 'ENHC':
+                data = data + array(H5.ETOT);
 
             # read time as separate dataset
             try:
@@ -278,7 +289,7 @@ def plot(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('msv', help='macroscopic state variables')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='MSV file in HDF5 format')
-    parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'PRESS', 'TEMP', 'VCM', 'VZ', 'XVIR'], help='equilibrium or stationary property')
+    parser.add_argument('--type', required=True, choices=['ETOT', 'EPOT', 'EKIN', 'ENHC', 'PRESS', 'TEMP', 'VCM', 'VZ', 'XVIR'], help='equilibrium or stationary property')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
