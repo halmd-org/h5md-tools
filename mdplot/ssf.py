@@ -82,16 +82,13 @@ def plot(args):
                 dim = param.box._v_attrs.dimension
                 # periodic simulation box length
                 L = param.box._v_attrs.length
-                if min(L) != max(L):
-                    raise SystemExit('can\'t handle non-cubic simulation boxes')
-                L = L[0]
                 # number of particles
                 N = sum(param.box._v_attrs.particles)
             else:
                 # positional coordinates dimension
                 dim = param.mdsim._v_attrs.dimension
-                # periodic simulation box length
-                L = param.mdsim._v_attrs.box_length
+                # edge lengths of cubic simulation box
+                L = repeat(param.mdsim._v_attrs.box_length, dim)
                 # number of particles
                 N = sum(param.mdsim._v_attrs.particles)
 
@@ -105,31 +102,38 @@ def plot(args):
         finally:
             f.close()
 
-        # reciprocal lattice distance
-        q_min = float32(2 * pi / L)
+        # unit cell (basis vectors) of reciprocal lattice
+        q_basis = float32(2 * pi / L)
+        q_min = max(q_basis)
         # number of values for |q|
         nq = int(args.q_limit / q_min)
         # absolute deviation of |q|
         q_err = q_min * args.q_error
 
         # generate n-dimensional q-grid
-        q_grid = q_min * squeeze(dstack(
+        q_grid = q_basis * squeeze(dstack(
                     reshape(
                         indices(repeat(nq + 1, dim), dtype=float32)
                       , (dim, -1)
                     )))
+
         # compute absolute |q| values of q-grid
         q_norm = sqrt(sum(q_grid * q_grid, axis=1))
 
-        # |q| value range
-        q_range = q_min * arange(1, nq + 1)
-
         # choose q vectors on surface of Ewald's sphere
-        q_list = {}
-        for j, q_val in enumerate(q_range):
-            q_list[j] = q_grid[where(abs(q_norm - q_val) < q_err)]
-            if args.verbose:
-                print '|q| = %.2f\t%4d vectors' % (q_val, len(q_list[j]))
+        # with magnitudes from linearly spaced grid
+        q_range = []
+        q_list = []
+        for q_val in q_min * arange(1, nq + 1):
+            q_ = q_grid[where(abs(q_norm - q_val) < q_err)]
+            if len(q_) > 0:
+                j = len(q_list)
+                q_list.append(q_)
+                q_range.append(q_val)
+                if args.verbose:
+                    print '|q| = %.2f\t%4d vectors' % (q_val, len(q_))
+        # adjust nq to actual number of wavenumbers
+        nq = len(q_range)
 
         # compute static structure factor over |q| range
         S_q = zeros(nq)
@@ -144,7 +148,7 @@ def plot(args):
         # average static structure factor over many samples
         for r in samples:
             # average over q vectors
-            for j,q in q_list.items():
+            for j,q in enumerate(q_list):
                 if args.cuda:
                     t1 = time()
                     S_q[j] += ssf_cuda(q, r, args.block_size, j==0)
