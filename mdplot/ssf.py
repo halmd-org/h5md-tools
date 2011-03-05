@@ -69,13 +69,13 @@ def plot(args):
             else:
                 samples = samples.r
 
-            # periodically extended particle positions
-            # possibly read several samples
+            # read periodically extended particle positions,
+            # read one or several samples, convert to single precision
             idx = [int(x) for x in split(':', args.sample)]
             if len(idx) == 1 :
-                samples = array([samples[idx[0]]])
+                samples = array([samples[idx[0]]], dtype=float32)
             elif len(idx) == 2:
-                samples = samples[idx[0]:idx[1]]
+                samples = array(samples[idx[0]:idx[1]], dtype=float32)
 
             if not compatibility:
                 # positional coordinates dimension
