@@ -51,48 +51,24 @@ def plot(args):
         except IOError:
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
-        H5 = f.root
-        param = H5.param
-
-        # backwards compatibility
-        compatibility = 'file_version' not in param._v_attrs
-        if compatibility:
-            print 'compatibility mode'
-
         try:
-            if args.flavour:
-                samples = H5.trajectory._v_children[args.flavour]
-            else:
-                samples = H5.trajectory
-            if not compatibility:
-                samples = samples.position
-            else:
-                samples = samples.r
+            H5 = f.root
+            param = H5.param
 
-            # read periodically extended particle positions,
-            # read one or several samples, convert to single precision
-            idx = [int(x) for x in split(':', args.sample)]
-            if len(idx) == 1 :
-                samples = array([samples[idx[0]]], dtype=float32)
-            elif len(idx) == 2:
-                samples = array(samples[idx[0]:idx[1]], dtype=float32)
+            # determine file type, prefer precomputed SSF data
+            if 'structure' in H5._v_groups and 'ssf' in H5.structure._v_groups:
+                # load SSF from file
+                pass
+            elif 'trajectory' in H5._v_groups:
+                # compute SSF from trajectory data
+                if args.flavour:
+                    H5trj = H5.trajectory._v_children[args.flavour]
+                else:
+                    H5trj = H5.trajectory
 
-            if not compatibility:
-                # positional coordinates dimension
-                dim = param.box._v_attrs.dimension
-                # periodic simulation box length
-                L = param.box._v_attrs.length
-                # number of particles
-                N = sum(param.box._v_attrs.particles)
-            else:
-                # positional coordinates dimension
-                dim = param.mdsim._v_attrs.dimension
-                # edge lengths of cubic simulation box
-                L = repeat(param.mdsim._v_attrs.box_length, dim)
-                # number of particles
-                N = sum(param.mdsim._v_attrs.particles)
+                q, S_q = ssf_from_trajectory(H5trj, param, args)
 
-            # store attributes for later use before closing the file
+            # before closing the file, store attributes for later use
             attrs = mdplot.label.attributes(param)
 
         except IndexError:
@@ -101,83 +77,6 @@ def plot(args):
             raise SystemExit(str(what) + '\nmissing simulation data in file: %s' % fn)
         finally:
             f.close()
-
-        # unit cell (basis vectors) of reciprocal lattice
-        q_basis = float32(2 * pi / L)
-        q_min = max(q_basis)
-        # number of values for |q|
-        nq = int(args.q_limit / q_min)
-        # absolute deviation of |q|
-        q_err = q_min * args.q_error
-
-        # generate n-dimensional q-grid
-        q_grid = q_basis * squeeze(dstack(
-                    reshape(
-                        indices(repeat(nq + 1, dim), dtype=float32)
-                      , (dim, -1)
-                    )))
-
-        # compute absolute |q| values of q-grid
-        q_norm = sqrt(sum(q_grid * q_grid, axis=1))
-
-        # choose q vectors on surface of Ewald's sphere
-        # with magnitudes from linearly spaced grid
-        q_range = []
-        q_list = []
-        for q_val in q_min * arange(1, nq + 1):
-            q_ = q_grid[where(abs(q_norm - q_val) < q_err)]
-            if len(q_) > 0:
-                j = len(q_list)
-                q_list.append(q_)
-                q_range.append(q_val)
-                if args.verbose:
-                    print '|q| = %.2f\t%4d vectors' % (q_val, len(q_))
-        # adjust nq to actual number of wavenumbers
-        nq = len(q_range)
-
-        # compute static structure factor over |q| range
-        S_q = zeros(nq)
-        S_q2 = zeros(nq)
-        timer_host = 0
-        timer_gpu = 0
-        global timer_copy, timer_memory, timer_exp, timer_sum
-        timer_copy = 0
-        timer_memory = 0
-        timer_exp = 0
-        timer_sum = 0
-        # average static structure factor over many samples
-        for r in samples:
-            # average over q vectors
-            for j,q in enumerate(q_list):
-                if args.cuda:
-                    t1 = time()
-                    S_q[j] += ssf_cuda(q, r, args.block_size, j==0)
-                    t2 = time()
-                    timer_gpu += t2 - t1
-                    if args.profiling:
-                        S_q2[j] += _static_structure_factor(q, r)
-                        t3 = time()
-                        timer_host += t3 - t2
-                else:
-                    S_q[j] += _static_structure_factor(q, r)
-
-        if args.cuda and args.profiling:
-            diff = abs(S_q - S_q2) / S_q
-            idx = where(diff > 1e-6)
-            print diff[idx], '@', q_range[idx]
-
-            print 'Copying: %.3f ms' % (1e3 * timer_copy)
-            print 'Memory allocation: %.3f ms' % (1e3 * timer_memory)
-            print 'Exponential: %.3f ms' % (1e3 * timer_exp)
-            print 'Summation: %.3f ms' % (1e3 * timer_sum)
-            print 'Overhead: %.3f ms' % (1e3 * (timer_gpu - \
-                    (timer_copy + timer_memory + timer_exp + timer_sum)))
-            print
-            print 'GPU  execution time: %.3f s' % (timer_gpu)
-            print 'Host execution time: %.3f s' % (timer_host)
-            print 'Speedup: %.1f' % (timer_host / timer_gpu)
-
-        S_q /= samples.shape[0]
 
         if args.label:
             label = args.label[i % len(args.label)] % attrs
@@ -190,8 +89,8 @@ def plot(args):
             title = args.title % attrs
 
         c = args.colors[i % len(args.colors)]
-        ax.plot(q_range, S_q, '-', color=c, label=label)
-        ax.plot(q_range, S_q, 'o', markerfacecolor=c, markeredgecolor=c, markersize=2)
+        ax.plot(q, S_q, '-', color=c, label=label)
+        ax.plot(q, S_q, 'o', markerfacecolor=c, markeredgecolor=c, markersize=2)
         if args.dump:
             f = open(args.dump, 'a')
             print >>f, '# %s' % label.replace(r'\_', '_')
@@ -234,6 +133,121 @@ def plot(args):
         plt.show()
     else:
         plt.savefig(args.output, dpi=args.dpi)
+
+"""
+Compute static structure factor from trajectory data
+"""
+def ssf_from_trajectory(H5data, param, args):
+    # backwards compatibility
+    compatibility = 'file_version' not in param._v_attrs
+    if not compatibility:
+        samples = H5data.position
+    else:
+        print 'compatibility mode'
+        samples = H5data.r
+
+    # read periodically extended particle positions,
+    # read one or several samples, convert to single precision
+    idx = [int(x) for x in split(':', args.sample)]
+    if len(idx) == 1:
+        samples = array([samples[idx[0]]], dtype=float32)
+    elif len(idx) == 2:
+        samples = array(samples[idx[0]:idx[1]], dtype=float32)
+
+    if not compatibility:
+        # positional coordinates dimension
+        dim = param.box._v_attrs.dimension
+        # periodic simulation box length
+        L = param.box._v_attrs.length
+        # number of particles
+        N = sum(param.box._v_attrs.particles)
+    else:
+        # positional coordinates dimension
+        dim = param.mdsim._v_attrs.dimension
+        # edge lengths of cubic simulation box
+        L = repeat(param.mdsim._v_attrs.box_length, dim)
+        # number of particles
+        N = sum(param.mdsim._v_attrs.particles)
+
+    # unit cell (basis vectors) of reciprocal lattice
+    q_basis = float32(2 * pi / L)
+    # minimal wavenumber
+    q_min = max(q_basis)
+    # number of values for |q|
+    nq = int(args.q_limit / q_min)
+    # absolute deviation of |q|
+    q_err = q_min * args.q_error
+
+    # generate n-dimensional q-grid
+    q_grid = q_basis * squeeze(dstack(
+                reshape(
+                    indices(repeat(nq + 1, dim), dtype=float32)
+                  , (dim, -1)
+                )))
+
+    # compute absolute |q| values of q-grid
+    q_norm = sqrt(sum(q_grid * q_grid, axis=1))
+
+    # choose q vectors on surface of Ewald's sphere
+    # with magnitudes from linearly spaced grid
+    q_range = []
+    q_list = []
+    for q_val in q_min * arange(1, nq + 1):
+        q_ = q_grid[where(abs(q_norm - q_val) < q_err)]
+        if len(q_) > 0:
+            j = len(q_list)
+            q_list.append(q_)
+            q_range.append(q_val)
+            if args.verbose:
+                print '|q| = %.2f\t%4d vectors' % (q_val, len(q_))
+    # adjust nq to actual number of wavenumbers
+    nq = len(q_range)
+
+    # compute static structure factor over |q| range
+    S_q = zeros(nq)
+    S_q2 = zeros(nq)
+    timer_host = 0
+    timer_gpu = 0
+    global timer_copy, timer_memory, timer_exp, timer_sum
+    timer_copy = 0
+    timer_memory = 0
+    timer_exp = 0
+    timer_sum = 0
+    # average static structure factor over many samples
+    for r in samples:
+        # average over q vectors
+        for j,q in enumerate(q_list):
+            if args.cuda:
+                t1 = time()
+                S_q[j] += ssf_cuda(q, r, args.block_size, j==0)
+                t2 = time()
+                timer_gpu += t2 - t1
+                if args.profiling:
+                    S_q2[j] += _static_structure_factor(q, r)
+                    t3 = time()
+                    timer_host += t3 - t2
+            else:
+                S_q[j] += _static_structure_factor(q, r)
+
+    if args.cuda and args.profiling:
+        diff = abs(S_q - S_q2) / S_q
+        idx = where(diff > 1e-6)
+        print diff[idx], '@', q_range[idx]
+
+        print 'Copying: %.3f ms' % (1e3 * timer_copy)
+        print 'Memory allocation: %.3f ms' % (1e3 * timer_memory)
+        print 'Exponential: %.3f ms' % (1e3 * timer_exp)
+        print 'Summation: %.3f ms' % (1e3 * timer_sum)
+        print 'Overhead: %.3f ms' % (1e3 * (timer_gpu - \
+                (timer_copy + timer_memory + timer_exp + timer_sum)))
+        print
+        print 'GPU  execution time: %.3f s' % (timer_gpu)
+        print 'Host execution time: %.3f s' % (timer_host)
+        print 'Speedup: %.1f' % (timer_host / timer_gpu)
+
+    S_q /= samples.shape[0]
+
+    return q_range, S_q
 
 def make_cuda_kernels():
     from pycuda.compiler import SourceModule
