@@ -224,6 +224,9 @@ def ssf_from_trajectory(H5data, param, args):
 
     # unit cell (basis vectors) of reciprocal lattice
     q_basis = float32(2 * pi / L)
+    # adjust unit cell if a slab is selected
+    if args.slab:
+        q_basis[-1] = float32(2 * pi / (args.slab[1] - args.slab[0]))
     # minimal wavenumber
     q_min = max(q_basis)
     # number of values for |q|
@@ -237,6 +240,10 @@ def ssf_from_trajectory(H5data, param, args):
                     indices(repeat(nq + 1, dim), dtype=float32)
                   , (dim, -1)
                 )))
+
+    # restrict to q vectors parallel to interface, i.e., perpendicular to interface normal
+    if args.interface:
+        q_grid = q_grid[where(q_grid[:, args.interface] == 0)]
 
     # compute absolute |q| values of q-grid
     q_norm = sqrt(sum(q_grid * q_grid, axis=1))
@@ -268,6 +275,10 @@ def ssf_from_trajectory(H5data, param, args):
     timer_sum = 0
     # average static structure factor over many samples
     for r in samples:
+        # restrict particles to slab perpendicular to last axis
+        if args.slab:
+            r = (r + .5 * L) % L - .5 * L   # particle image inside the periodic simulation box
+            r = r[where((r[:, -1] > args.slab[0]) & (r[:, -1] < args.slab[1]))]
         # average over q vectors
         for j,q in enumerate(q_list):
             if args.cuda:
@@ -391,6 +402,8 @@ def add_parser(subparsers):
     parser.add_argument('input', nargs='+', metavar='INPUT', help='HDF5 file with trajectory or ssf data')
     parser.add_argument('--flavour', help='particle flavour')
     parser.add_argument('--sample', help='index of phase space sample(s)')
+    parser.add_argument('--interface', metavar='AXIS', type=int, help='restrict to q-vectors perpendicular to interface normal')
+    parser.add_argument('--slab', metavar='ZPOS', type=float, nargs=2, help='restrict to particles in a slab')
     parser.add_argument('--q-limit', type=float, help='maximum value of |q|')
     parser.add_argument('--q-error', type=float, help='relative deviation of |q|')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
