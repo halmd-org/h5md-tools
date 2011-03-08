@@ -66,7 +66,7 @@ def main():
             dimension = H5.param.box._v_attrs.dimension
             density = H5.param.box._v_attrs.density
             npart = sum(H5.param.box._v_attrs.particles)
-            cutoff = H5.param.lennard_jones._v_attrs.cutoff[0]
+            cutoff = H5.param._v_children[H5.param._v_attrs.force]._v_attrs.cutoff[0]
 
             if args.table:
                 print '%.4g  %.3g\t' % (density, cutoff),
