@@ -58,7 +58,10 @@ def plot(args):
             # determine file type, prefer precomputed SSF data
             if 'structure' in H5._v_groups and 'ssf' in H5.structure._v_groups:
                 # load SSF from file
-                pass
+                H5ssf = H5.structure.ssf._v_children[args.flavour or 'AA']
+                q = H5.structure.ssf.wavenumber[0]
+                S_q, S_q_err = load_ssf(H5ssf, args)
+
             elif 'trajectory' in H5._v_groups:
                 # compute SSF from trajectory data
                 if args.flavour:
@@ -67,6 +70,8 @@ def plot(args):
                     H5trj = H5.trajectory
 
                 q, S_q = ssf_from_trajectory(H5trj, param, args)
+            else:
+                raise SystemExit('Input file provides neither SSF data nor a trajectory')
 
             # before closing the file, store attributes for later use
             attrs = mdplot.label.attributes(param)
@@ -90,12 +95,20 @@ def plot(args):
 
         c = args.colors[i % len(args.colors)]
         ax.plot(q, S_q, '-', color=c, label=label)
-        ax.plot(q, S_q, 'o', markerfacecolor=c, markeredgecolor=c, markersize=2)
+        if 'S_q_err' in locals():
+            ax.errorbar(q, S_q, S_q_err, fmt='o', color=c, markerfacecolor=c, markeredgecolor=c, markersize=2, linewidth=.5)
+        else:
+            ax.plot(q, S_q, 'o', markerfacecolor=c, markeredgecolor=c, markersize=2)
+
         if args.dump:
             f = open(args.dump, 'a')
             print >>f, '# %s' % label.replace(r'\_', '_')
-            print >>f, '# q   S_q'
-            savetxt(f, array((q_range, S_q)).T)
+            if 'S_q_err' in locals():
+                print >>f, '# q   S_q   S_q_err'
+                savetxt(f, array((q, S_q, S_q_err)).T)
+            else:
+                print >>f, '# q   S_q'
+                savetxt(f, array((q, S_q)).T)
             print >>f, '\n'
             f.close()
 
@@ -133,6 +146,33 @@ def plot(args):
         plt.show()
     else:
         plt.savefig(args.output, dpi=args.dpi)
+
+"""
+Load precomputed SSF data from HDF5 file
+"""
+def load_ssf(H5data, args):
+    idx = [int(x) for x in split(':', args.sample)]
+    if len(idx) == 1:
+        idx = idx + [-1]
+    ssf = H5data[idx[0]:idx[1]]
+
+    # compute mean
+    S_q = mean(ssf[..., 0], axis=0)
+
+    # error has two contributions:
+    # sum squares of individual errors
+    S_q_err = sum(pow(ssf[..., 1], 2), axis=0) / pow(ssf.shape[0], 2)
+    # estimate error from blocking
+    nblocks = min(ssf.shape[0], 10)
+    if nblocks > 1:
+        # cut size of data to a multiple of args.blocks
+        ssf = ssf[:int(nblocks * floor(ssf.shape[0] / nblocks))]
+        # reshape in equally sized blocks
+        ssf = reshape(ssf, (nblocks, -1,) + ssf.shape[1:])
+        S_q_err += var(mean(ssf[..., 0], axis=1), axis=0) / (nblocks - 1)
+    S_q_err = sqrt(S_q_err)
+
+    return S_q, S_q_err
 
 """
 Compute static structure factor from trajectory data
@@ -335,7 +375,7 @@ def ssf_cuda(q, r, block_size=128, copy=True):
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('ssf', help='static structure factor')
-    parser.add_argument('input', nargs='+', metavar='INPUT', help='HDF5 trajectory file')
+    parser.add_argument('input', nargs='+', metavar='INPUT', help='HDF5 file with trajectory or ssf data')
     parser.add_argument('--flavour', help='particle flavour')
     parser.add_argument('--sample', help='index of phase space sample(s)')
     parser.add_argument('--q-limit', type=float, help='maximum value of |q|')
