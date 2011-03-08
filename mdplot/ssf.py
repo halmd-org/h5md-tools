@@ -138,6 +138,8 @@ def plot(args):
         plt.setp(ax, xlim=args.xlim)
     if args.ylim:
         plt.setp(ax, ylim=args.ylim)
+    else:
+        plt.setp(ax, ylim=(0, plt.ylim()[1]))
 
     plt.xlabel(args.xlabel or r'$\lvert\textbf{q}\rvert\sigma$')
     plt.ylabel(args.ylabel or r'$S(\lvert\textbf{q}\rvert)$')
