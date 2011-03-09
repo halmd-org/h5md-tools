@@ -33,20 +33,20 @@ def main():
 
     # construct header of table
     if args.table:
-        header = '# 1:Density  2:Cutoff   '
-        col = 3
+        header = '# 1:Density  2:Cutoff  3:Particles '
+        col = 4
         for (i,dset) in enumerate(args.datasets):
             name = dset[0].upper() + dset[1:].lower()
-            header = header + '{0:d}:'.format(col) + name
-            header = header + '  {0:d}:err('.format(col + 1) + name + ')   '
-            name = 'Δ' + name
-            header = header + '{0:d}:'.format(col + 2) + name
-            header = header + '  {0:d}:err('.format(col + 3) + name + ')   '
+            header = header + '{0:2d}:{1:6s} '.format(col, name)
+            header = header + '{0:2d}:{1:11s} '.format(col + 1, 'err(' + name + ')')
+            name = 'Δ' + name   # the unicode character has length 2
+            header = header + '{0:2d}:{1:7s} '.format(col + 2, name)
+            header = header + '{0:2d}:{1:12s} '.format(col + 3, 'err(' + name + ')')
             col += 4
 
         for name in coeff.keys():
-            header = header + '{0:d}:'.format(col) + name
-            header = header + '  {0:d}:err('.format(col + 1) + name + ')   '
+            header = header + '{0:2d}:{1:6s} '.format(col, name)
+            header = header + '{0:2d}:{1:11s} '.format(col + 1, 'err(' + name + ')')
             col += 2
 
         print header[:-2]
@@ -65,14 +65,15 @@ def main():
             # read parameters
             dimension = H5.param.box._v_attrs.dimension
             density = H5.param.box._v_attrs.density
-            npart = sum(H5.param.box._v_attrs.particles)
+            npart = sum(H5.param.box._v_attrs.particles).astype(int)
             cutoff = H5.param._v_children[H5.param._v_attrs.force]._v_attrs.cutoff[0]
 
             if args.table:
-                print '%.4g  %.3g\t' % (density, cutoff),
+                print '  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart),
             else:
                 print 'Filename: %s' % fn
-                print 'Cutoff: %.3g' % cutoff
+                print 'Cutoff: %g' % cutoff
+                print 'Particles: %d' % npart
                 print 'Density: %.4g' % density
 
             # iterate over datasets
@@ -111,8 +112,8 @@ def main():
                 ]
 
                 if args.table:
-                    print '{0:.5g} {1:.5g}  '.format(*mean_values),
-                    print '{0:.5g} {1:.5g}  '.format(*std_values),
+                    print '{0:<12.6g} {1:<10.3g} '.format(*mean_values),
+                    print '{0:<12.6g} {1:<10.3g} '.format(*std_values),
                 else:
                     try:
                         desc = H5._v_leaves[dset]._v_attrs.description
@@ -197,7 +198,7 @@ def main():
 
                 for name in coeff.keys():
                     if args.table:
-                        print '{0:.5g} {1:.5g}  '.format(*coeff[name]),
+                        print '{0:<12.6g} {1:<10.3g} '.format(*coeff[name]),
                     else:
                         desc = description[name].capitalize()
                         print '{0:s}: {1:.4g} ± {2:.3g}'.format(desc, coeff[name][0], coeff[name][1])
