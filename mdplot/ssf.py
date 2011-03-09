@@ -100,6 +100,17 @@ def plot(args):
         else:
             ax.plot(q, S_q, 'o', markerfacecolor=c, markeredgecolor=c, markersize=2)
 
+        # optionally plot compressibility
+        if args.compressibility and attrs['density'] and attrs['temperature']:
+            chi_T = args.compressibility[i % len(args.compressibility)]
+            rho = attrs['density']
+            temp = attrs['temperature']
+            x = linspace(1e-3, 3 * q[0], num=2)
+            y = empty_like(x)
+            y.fill(chi_T * rho * temp)
+            ax.plot(x, y, ':', color=c, linewidth=.5)
+
+        # write plot data to file
         if args.dump:
             f = open(args.dump, 'a')
             print >>f, '# %s' % label.replace(r'\_', '_')
@@ -386,6 +397,7 @@ def add_parser(subparsers):
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s)')
+    parser.add_argument('--compressibility', type=float, nargs='+', help='isothermal compressibility for S(q → 0)')
     parser.add_argument('--cuda', action='store_true', help='use CUDA device to speed up the computation')
     parser.add_argument('--block-size', type=int, help='block size to be used for CUDA calls')
     parser.add_argument('--profiling', action='store_true', help='output profiling results and compare with host version')
