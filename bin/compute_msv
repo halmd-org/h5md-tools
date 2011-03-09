@@ -69,6 +69,7 @@ def main():
             cutoff = H5.param._v_children[H5.param._v_attrs.force]._v_attrs.cutoff[0]
 
             if args.table:
+                print '# {0}, skip={1}'.format(fn, args.skip)
                 print '  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart),
             else:
                 print 'Filename: %s' % fn
