@@ -1,0 +1,118 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright © 2011  Felix Höfling
+#
+# concatenate trajectory samples from different H5MD files
+#
+# The param group is copied from the first file, only /param/box is adjusted accordingly.
+# Currently, only a single particle species is supported.
+#
+
+from numpy import *
+import tables, argparse
+
+def main():
+    # parse command line options
+    args = parse_args()
+
+    if len(args.input) < 2:
+        print 'Need 2 input files at least'
+        return
+
+    # open output file
+    try:
+        of = tables.openFile(args.output, mode='w')
+    except IOError:
+        raise SystemExit('Failed to write HDF5 file: %s' % fn)
+    H5out = of.root
+
+    try:
+        # create group 'trajectory'
+        of.createGroup('/', 'trajectory', '')
+
+        # open input files
+        input = []
+        box_length = []
+        for i, fn in enumerate(args.input):
+            try:
+                f = tables.openFile(fn, mode='r')
+            except IOError:
+                print 'Failed to open HDF5 file: %s' % fn
+                print 'Skipped\n'
+                continue
+
+            H5in = f.root
+
+            try:
+                # on first input file
+                if i == 0:
+                    # copy group 'param'
+                    H5in.param._f_copy(newparent=H5out, recursive=True)
+                    dimension = H5out.param.box._v_attrs.dimension
+                    # create group 'time' and append time stamp of last sample
+                    time = H5in.trajectory.time
+                    of.createEArray(H5out.trajectory, 'time', time.atom, (0,))
+                    H5out.trajectory.time.append((time[args.sample],))
+                    H5out.trajectory.time.close()
+                else:
+                    # check that dimension and box size are compatible
+                    if H5in.param.box._v_attrs.dimension != dimension:
+                        raise SystemExit('Space dimension of input files must match')
+
+                    idx, = where(abs(H5in.param.box._v_attrs.length / box_length[0] - 1) > 1e-6)
+                    if len(idx) > 0 and idx[0] != args.axis % dimension:
+                        raise SystemExit('Box edges perpendicular to concatenation axis must match')
+
+                input += [(f, H5in.trajectory.position, H5in.trajectory.velocity)]
+                box_length += [H5in.param.box._v_attrs.length]
+
+            except tables.exceptions.NoSuchNodeError:
+                f.close()
+                raise SystemExit('Missing trajectory data in file: %s' % fn)
+
+        # concatenate positions:
+        # string subsystems together along specified axis by appropriate shifts
+        shift = -.5 * sum(array(box_length)[1:, args.axis])
+
+        position = ()
+        for i,(f,r,v) in enumerate(input):
+            r_ = r[args.sample]
+            r_[..., args.axis] += shift
+            position += (r_,)
+            shift += box_length[i][args.axis]
+        position = concatenate(position)
+
+        of.createEArray(H5out.trajectory, 'position', input[0][2].atom, (0,) + position.shape)
+        H5out.trajectory.position.append((position,))
+        H5out.trajectory.position.close()
+
+        # concatenate velocities
+        velocity = concatenate([v[args.sample] for (f,r,v) in input])
+        of.createEArray(H5out.trajectory, 'velocity', input[0][2].atom, (0,) + velocity.shape)
+        H5out.trajectory.velocity.append((velocity,))
+        H5out.trajectory.velocity.close()
+
+        # update box length, particle number, and average density
+        box_length_ = box_length[0]
+        box_length_[args.axis] = sum(array(box_length)[:, args.axis])
+        H5out.param.box._v_attrs.length = box_length_
+        H5out.param.box._v_attrs.particles = array([position.shape[0],])
+        H5out.param.box._v_attrs.density = position.shape[0] / prod(box_length_) 
+
+    finally:
+        # close files
+        of.close()
+        for (f,r,v) in input:
+            f.close()
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog='h5md_cat')
+    parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 trajectory files')
+    parser.add_argument('-o', '--output', required=True, help='output filename')
+    parser.add_argument('--axis', default=-1, type=int, help='concatenation axis')
+    parser.add_argument('--sample', default=-1, type=int, help='index of phase space sample')
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    main()
