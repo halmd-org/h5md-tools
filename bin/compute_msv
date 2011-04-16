@@ -66,14 +66,19 @@ def main():
             dimension = H5.param.box._v_attrs.dimension
             density = H5.param.box._v_attrs.density
             npart = sum(H5.param.box._v_attrs.particles).astype(int)
-            cutoff = H5.param._v_children[H5.param._v_attrs.force]._v_attrs.cutoff[0]
+            force_param = H5.param._v_children[H5.param._v_attrs.force]
+            if 'cutoff' in force_param._v_attrs:
+                cutoff = force_param._v_attrs.cutoff[0]
+            else:
+                cutoff = 0
 
             if args.table:
                 print '# {0}, skip={1}'.format(fn, args.skip)
                 print '  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart),
             else:
                 print 'Filename: %s' % fn
-                print 'Cutoff: %g' % cutoff
+                if cutoff > 0:
+                    print 'Cutoff: %g' % cutoff
                 print 'Particles: %d' % npart
                 print 'Density: %.4g' % density
 
