@@ -10,6 +10,7 @@
 #
 
 from numpy import *
+from os.path import basename
 import tables, argparse
 
 def main():
@@ -70,6 +71,9 @@ def main():
             except tables.exceptions.NoSuchNodeError:
                 f.close()
                 raise SystemExit('Missing trajectory data in file: %s' % fn)
+
+        # store input file names
+        H5out._v_attrs.input_files = [basename(f.filename) for (f,r,v) in input]
 
         # concatenate positions:
         # string subsystems together along specified axis by appropriate shifts
