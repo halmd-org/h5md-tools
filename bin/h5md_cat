@@ -81,7 +81,8 @@ def main():
 
         position = ()
         for i,(f,r,v) in enumerate(input):
-            r_ = r[args.sample]
+            L = box_length[i]
+            r_ = r[args.sample] % L - .5 * L # map positions back to simulation box
             r_[..., args.axis] += shift
             position += (r_,)
             shift += box_length[i][args.axis]
