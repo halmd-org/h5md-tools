@@ -72,8 +72,10 @@ def main():
                 f.close()
                 raise SystemExit('Missing trajectory data in file: %s' % fn)
 
-        # store input file names
-        H5out._v_attrs.input_files = [basename(f.filename) for (f,r,v) in input]
+        # store input file names and spacing parameter
+        of.createGroup('/param', 'input')
+        H5out.param.input._v_attrs.files = [basename(f.filename) for (f,r,v) in input]
+        H5out.param.input._v_attrs.spacing = args.spacing
 
         # concatenate positions:
         # string subsystems together along specified axis by appropriate shifts
@@ -83,6 +85,7 @@ def main():
         for i,(f,r,v) in enumerate(input):
             L = box_length[i]
             r_ = r[args.sample] % L - .5 * L # map positions back to simulation box
+            r_[..., args.axis] *= 1 - args.spacing / L[args.axis] # compress to allow for spacing
             r_[..., args.axis] += shift
             position += (r_,)
             shift += box_length[i][args.axis]
@@ -117,6 +120,7 @@ def parse_args():
     parser.add_argument('-o', '--output', required=True, help='output filename')
     parser.add_argument('--axis', default=-1, type=int, help='concatenation axis')
     parser.add_argument('--sample', default=-1, type=int, help='index of phase space sample')
+    parser.add_argument('--spacing', default=0, type=float, help='spacing between concatenated samples')
     return parser.parse_args()
 
 if __name__ == '__main__':
