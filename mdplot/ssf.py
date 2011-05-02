@@ -113,7 +113,7 @@ def plot(args):
         # write plot data to file
         if args.dump:
             f = open(args.dump, 'a')
-            print >>f, '# %s' % label.replace(r'\_', '_')
+            print >>f, '# %s, sample %s' % (label.replace(r'\_', '_'), args.sample)
             if 'S_q_err' in locals():
                 print >>f, '# q   S_q   S_q_err'
                 savetxt(f, array((q, S_q, S_q_err)).T)
