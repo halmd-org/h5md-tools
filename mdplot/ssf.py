@@ -129,7 +129,7 @@ def plot(args):
             if args.verbose:
                 print 'Density: {0:g}'.format(density)
                 print 'Temperature: {0:g}'.format(temperature)
-                print 'Compressiblity: {0:g} ± {1:g}'.format(kappa, kappa_err)
+                print 'Compressibility: {0:g} ± {1:g}'.format(kappa, kappa_err)
                 print 'Correlation length: {0:g} ± {1:g}'.format(xi, xi_err)
 
             if args.axes == 'loglog' or args.axes == 'xlog':
