@@ -22,12 +22,23 @@
 import os, os.path
 from matplotlib import ticker
 from numpy import *
+import scipy.odr as odr
 from re import split
 import tables
 import mdplot.label
 import ssf
 from mdplot.ext import _static_structure_factor
 from time import time
+
+def ornstein_zernike(params, q, rho, temp):
+    """
+    Static structure factor in Ornstein-Zernike approximation
+    """
+    kappa, xi = params
+    return rho * temp * kappa / (1 + (q * xi)**2)
+
+def ornstein_zernike_log(params, log_q, rho, temp):
+    return ornstein_zernike(params, exp(log_q), rho, temp)
 
 """
 Compute and plot static structure factor
@@ -100,15 +111,33 @@ def plot(args):
         else:
             ax.plot(q, S_q, 'o', markerfacecolor=c, markeredgecolor=c, markersize=2)
 
-        # optionally plot compressibility
-        if args.compressibility and attrs['density'] and attrs['temperature']:
-            chi_T = args.compressibility[i % len(args.compressibility)]
-            rho = attrs['density']
-            temp = attrs['temperature']
-            x = linspace(1e-3, 3 * q[0], num=2)
-            y = empty_like(x)
-            y.fill(chi_T * rho * temp)
-            ax.plot(x, y, ':', color=c, linewidth=.5)
+        # optionally fit Ornstein-Zernike form
+        if args.fit_ornstein_zernike:
+            density = attrs['density']
+            temperature = attrs['temperature']
+            idx, = where(q <= args.fit_limit)
+            kappa = mean(S_q[idx]) / density / temperature  # initial guess
+            # result is a tuple (param, param_err, covariance_matrix)
+            param, param_err = odr.odr(
+                ornstein_zernike_log                    # fit model
+              , (kappa, 1)                              # initial parameter values (kappa, xi)
+              , S_q[idx], log(q[idx])                   # data (y, x)
+              , extra_args=(density, temperature,), full_output=0
+            )[:2]
+            kappa, xi = abs(param)
+            kappa_err, xi_err = param_err
+            if args.verbose:
+                print 'Density: {0:g}'.format(density)
+                print 'Temperature: {0:g}'.format(temperature)
+                print 'Compressiblity: {0:g} ± {1:g}'.format(kappa, kappa_err)
+                print 'Correlation length: {0:g} ± {1:g}'.format(xi, xi_err)
+
+            if args.axes == 'loglog' or args.axes == 'xlog':
+                x = logspace(log10(args.xlim or .01), log10(3 * args.fit_limit), num=20)
+            else:
+                x = linspace(0, 3 * args.fit_limit, num=20)
+            y = ornstein_zernike((kappa, xi), x, density, temperature)
+            ax.plot(x, y, ':', color=c, linewidth=.8)
 
         # write plot data to file
         if args.dump:
@@ -131,6 +160,15 @@ def plot(args):
             py = pow_coeff * pow(px, pow_exp)
             ax.plot(px, py, 'k--')
 
+    # adjust axis ranges
+    ax.axis('tight')
+    if args.xlim:
+        plt.setp(ax, xlim=args.xlim)
+    if args.ylim:
+        plt.setp(ax, ylim=args.ylim)
+    else:
+        plt.setp(ax, ylim=(0, plt.ylim()[1]))
+
     # optionally plot with logarithmic scale(s)
     if args.axes == 'xlog':
         ax.set_xscale('log')
@@ -143,14 +181,6 @@ def plot(args):
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
         l.legendPatch.set_alpha(0.7)
-
-    ax.axis('tight')
-    if args.xlim:
-        plt.setp(ax, xlim=args.xlim)
-    if args.ylim:
-        plt.setp(ax, ylim=args.ylim)
-    else:
-        plt.setp(ax, ylim=(0, plt.ylim()[1]))
 
     plt.xlabel(args.xlabel or r'$\lvert\textbf{q}\rvert\sigma$')
     plt.ylabel(args.ylabel or r'$S(\lvert\textbf{q}\rvert)$')
@@ -397,10 +427,11 @@ def add_parser(subparsers):
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s)')
-    parser.add_argument('--compressibility', type=float, nargs='+', help='isothermal compressibility for S(q → 0)')
+    parser.add_argument('--fit-ornstein-zernike', action='store_true', help='fit Ornstein-Zernike form to S(q)')
+    parser.add_argument('--fit-limit', type=float, help='maximum wavenumber for OZ fit')
     parser.add_argument('--cuda', action='store_true', help='use CUDA device to speed up the computation')
     parser.add_argument('--block-size', type=int, help='block size to be used for CUDA calls')
     parser.add_argument('--profiling', action='store_true', help='output profiling results and compare with host version')
     parser.add_argument('--verbose', action='store_true')
-    parser.set_defaults(sample='0', q_limit=15, q_error=0.1, block_size=256)
+    parser.set_defaults(sample='0', q_limit=15, q_error=0.1, fit_limit=.5, block_size=256)
 
