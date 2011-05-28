@@ -23,9 +23,8 @@ setup(name = 'mdplot',
       author = ('Peter Colberg', 'Felix Höfling'),
       author_email = ('peter.colberg@physik.uni-muenchen.de', 'hoefling@mf.mpg.de'),
       packages = ['mdplot'],
-      scripts = ['bin/mdplot', 'bin/compute_msv'],
+      scripts = ['bin/mdplot', 'bin/compute_msv', 'bin/h5md_cat'],
       package_data={'mdplot': ['gpu/ssf_kernel.cu']},
       ext_modules = [module1],
       license = 'GPL'
       )
-
