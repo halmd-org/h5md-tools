@@ -133,7 +133,7 @@ def plot(args):
                 print 'Correlation length: {0:g} ± {1:g}'.format(xi, xi_err)
 
             if args.axes == 'loglog' or args.axes == 'xlog':
-                x = logspace(log10(args.xlim or .01), log10(3 * args.fit_limit), num=20)
+                x = logspace(log10(args.xlim[0] or .01), log10(3 * args.fit_limit), num=20)
             else:
                 x = linspace(0, 3 * args.fit_limit, num=20)
             y = ornstein_zernike((kappa, xi), x, density, temperature)
