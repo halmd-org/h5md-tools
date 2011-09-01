@@ -47,6 +47,8 @@ def main():
             try:
                 # on first input file
                 if i == 0:
+                    # copy group 'h5md' # FIXME these entries should be updated
+                    f.copy('h5md', of)
                     # copy group 'halmd'
                     f.copy('halmd', of)
                     dimension = of['halmd/box'].attrs['dimension']
