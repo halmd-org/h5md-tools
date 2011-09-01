@@ -11,7 +11,8 @@
 
 from numpy import *
 from os.path import basename
-import tables, argparse
+import argparse
+import h5py
 
 def main():
     # parse command line options
@@ -23,63 +24,66 @@ def main():
 
     # open output file
     try:
-        of = tables.openFile(args.output, mode='w')
+        of = h5py.File(args.output, 'w')
     except IOError:
         raise SystemExit('Failed to write HDF5 file: %s' % fn)
-    H5out = of.root
 
     try:
         # create group 'trajectory'
-        of.createGroup('/', 'trajectory', '')
+        H5out = of.create_group('trajectory/A')
 
         # open input files
         input = []
         box_length = []
         for i, fn in enumerate(args.input):
             try:
-                f = tables.openFile(fn, mode='r')
+                f = h5py.File(fn, 'r')
             except IOError:
                 print 'Failed to open HDF5 file: %s' % fn
                 print 'Skipped\n'
                 continue
-
-            H5in = f.root
+            H5in = f['trajectory/A']
 
             try:
                 # on first input file
                 if i == 0:
-                    # copy group 'param'
-                    H5in.param._f_copy(newparent=H5out, recursive=True)
-                    dimension = H5out.param.box._v_attrs.dimension
+                    # copy group 'halmd'
+                    f.copy('halmd', of)
+                    dimension = of['halmd/box'].attrs['dimension']
+                    # copy group 'box'
+                    f.copy('trajectory/box', of['trajectory'])
                     # create group 'time' and append time stamp of last sample
-                    time = H5in.trajectory.time
-                    of.createEArray(H5out.trajectory, 'time', time.atom, (0,))
-                    H5out.trajectory.time.append((time[args.sample],))
-                    H5out.trajectory.time.close()
+                    shape = H5in['position/time'].shape # workaround reverse slicing bug
+                    group = H5out.require_group('position')
+                    ds = group.create_dataset('time', data=(H5in['position/time'][shape[0]-1],), maxshape=(None,))
+                    H5out.require_group('velocity')['time'] = ds # make hard link
+                    ds = group.create_dataset('step', data=(H5in['position/step'][shape[0]-1],), maxshape=(None,))
+                    H5out.require_group('velocity')['step'] = ds
                 else:
                     # check that dimension and box size are compatible
-                    if H5in.param.box._v_attrs.dimension != dimension:
+                    if f['halmd/box'].attrs['dimension'] != dimension:
                         raise SystemExit('Space dimension of input files must match')
 
-                    idx, = where(abs(H5in.param.box._v_attrs.length / box_length[0] - 1) > 1e-6)
+                    idx, = where(abs(f['halmd/box'].attrs['length'] / box_length[0] - 1) > 1e-6)
                     if len(idx) > 0 and idx[0] != args.axis % dimension:
                         raise SystemExit('Box edges perpendicular to concatenation axis must match')
 
-                input += [(f, H5in.trajectory.position, H5in.trajectory.velocity)]
-                box_length += [H5in.param.box._v_attrs.length]
+                input += [(f, H5in['position/sample'], H5in['velocity/sample'])]
+                box_length += [f['halmd/box'].attrs['length']]
 
-            except tables.exceptions.NoSuchNodeError:
+            except KeyError:
                 f.close()
                 raise SystemExit('Missing trajectory data in file: %s' % fn)
 
         # store input file names and spacing parameter
-        of.createGroup('/param', 'input')
-        H5out.param.input._v_attrs.files = [basename(f.filename) for (f,r,v) in input]
-        H5out.param.input._v_attrs.spacing = args.spacing
+        group = of.create_group('h5md_cat/input')
+        group.attrs.create('files', array([basename(f.filename) for (f,r,v) in input]), dtype=h5py.new_vlen(str))
+        group.attrs.create('spacing', args.spacing)
 
         # concatenate positions:
         # string subsystems together along specified axis by appropriate shifts
         shift = -.5 * sum(array(box_length)[1:, args.axis])
+        box_offset = shift - .5 * box_length[0][args.axis]
 
         position = ()
         for i,(f,r,v) in enumerate(input):
@@ -91,22 +95,27 @@ def main():
             shift += box_length[i][args.axis]
         position = concatenate(position)
 
-        of.createEArray(H5out.trajectory, 'position', input[0][2].atom, (0,) + position.shape)
-        H5out.trajectory.position.append((position,))
-        H5out.trajectory.position.close()
+        H5out.require_group('position').create_dataset(
+            'sample', data=(position,),
+            maxshape=(None,) + position.shape, dtype=input[0][1].dtype,
+        )
 
         # concatenate velocities
         velocity = concatenate([v[args.sample] for (f,r,v) in input])
-        of.createEArray(H5out.trajectory, 'velocity', input[0][2].atom, (0,) + velocity.shape)
-        H5out.trajectory.velocity.append((velocity,))
-        H5out.trajectory.velocity.close()
+        H5out.require_group('velocity').create_dataset(
+            'sample', data=(velocity,),
+            maxshape=(None,) + velocity.shape, dtype=input[0][1].dtype,
+        )
 
         # update box length, particle number, and average density
         box_length_ = box_length[0]
         box_length_[args.axis] = sum(array(box_length)[:, args.axis])
-        H5out.param.box._v_attrs.length = box_length_
-        H5out.param.box._v_attrs.particles = array([position.shape[0],])
-        H5out.param.box._v_attrs.density = position.shape[0] / prod(box_length_) 
+        of['halmd/box'].attrs.modify('length', box_length_)
+        of['halmd/box'].attrs.modify('particles', array([position.shape[0],]))
+        of['halmd/box'].attrs.modify('density', position.shape[0] / prod(box_length_)) 
+
+        of['trajectory/box/edges'][args.axis, args.axis] = box_length_[args.axis]
+        of['trajectory/box/offset'][args.axis] = box_offset
 
     finally:
         # close files
