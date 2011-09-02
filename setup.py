@@ -17,13 +17,13 @@ module1 = Extension('mdplot.ext',
                      extra_compile_args = ['-O3', '-fopenmp', '-mtune=native', '-Wall'],
                      extra_link_args = ['-fopenmp'])
 
-setup(name = 'mdplot',
+setup(name = 'h5md',
       version = parse_git_version(),
-      description = 'Molecular Dynamics simulation plotter',
+      description = 'Toolset for H5MD files',
       author = ('Peter Colberg', 'Felix Höfling'),
-      author_email = ('peter.colberg@physik.uni-muenchen.de', 'hoefling@mf.mpg.de'),
-      packages = ['mdplot'],
-      scripts = ['bin/mdplot', 'bin/compute_msv', 'bin/h5md_cat'],
+      author_email = ('peter.colberg@utoronto.ca', 'hoefling@mf.mpg.de'),
+      packages = ['h5md', 'h5md._plot', 'mdplot'],
+      scripts = ['bin/h5md', 'bin/mdplot', 'bin/compute_msv', 'bin/h5md_cat'],
       package_data={'mdplot': ['gpu/ssf_kernel.cu']},
       ext_modules = [module1],
       license = 'GPL'

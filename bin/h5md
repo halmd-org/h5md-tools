@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# h5md - toolset for analysis and manipulation of H5MD files
+#
+# Copyright © 2011  Peter Colberg and Felix Höfling
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+
+import argparse
+from h5md import *
+import h5md
+import sys
+
+def main():
+    # parse command line arguments
+    args = parse_args()
+
+    # execute plot command
+    try:
+        tools[args.command].main(args)
+
+    except SystemExit, status:
+        exit('ERROR: %s' % status)
+
+tools = dict([(m, sys.modules['h5md.%s' % m]) for m in h5md.__all__])
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog='h5md')
+
+    subparsers = parser.add_subparsers(dest='command', help='available modules')
+    for tool in tools.itervalues():
+        tool.add_parser(subparsers)
+
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    main()
