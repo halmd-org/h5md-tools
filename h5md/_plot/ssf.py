@@ -19,17 +19,6 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
-import os, os.path
-from matplotlib import ticker
-from numpy import *
-import scipy.odr as odr
-from re import split
-import tables
-import h5md._plot.label
-import ssf
-from h5md._plot.ext import _static_structure_factor
-from time import time
-
 def ornstein_zernike(params, q, rho, temp):
     """
     Static structure factor in Ornstein-Zernike approximation
@@ -38,13 +27,20 @@ def ornstein_zernike(params, q, rho, temp):
     return rho * temp * kappa / (1 + (q * xi)**2)
 
 def ornstein_zernike_log(params, log_q, rho, temp):
+    from numpy import exp
     return ornstein_zernike(params, exp(log_q), rho, temp)
 
 """
 Compute and plot static structure factor
 """
 def plot(args):
+    import os, os.path
+    import h5py
     from matplotlib import pyplot as plt
+    import h5md._plot.label
+    from numpy import *
+    #from matplotlib import ticker
+    # import ssf
 
     # import pycuda only if required
     if args.cuda:
@@ -58,38 +54,34 @@ def plot(args):
 
     for (i, fn) in enumerate(args.input):
         try:
-            f = tables.openFile(fn, mode='r')
+            f = h5py.File(fn, 'r')
         except IOError:
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         try:
-            H5 = f.root
-            param = H5.param
+            param = f['halmd']
 
             # determine file type, prefer precomputed SSF data
-            if 'structure' in H5._v_groups and 'ssf' in H5.structure._v_groups:
+            if 'structure' in f.keys() and 'ssf' in f['structure'].keys():
                 # load SSF from file
-                H5ssf = H5.structure.ssf._v_children[args.flavour or 'AA']
-                q = H5.structure.ssf.wavenumber[0]
-                S_q, S_q_err = load_ssf(H5ssf, args)
+                H5 = f['structure/ssf/' + '/'.join(args.flavour)]
+                q = f['structure/ssf/wavenumber'].__array__() # store in memory by conversion to NumPy array
+                S_q, S_q_err = load_ssf(H5, args)
 
-            elif 'trajectory' in H5._v_groups:
+            elif 'trajectory' in f.keys():
                 # compute SSF from trajectory data
-                if args.flavour:
-                    H5trj = H5.trajectory._v_children[args.flavour]
-                else:
-                    H5trj = H5.trajectory
+                H5 = H5['trajectory/{0}'.format(args.flavour[0])]
 
-                q, S_q = ssf_from_trajectory(H5trj, param, args)
+                q, S_q = ssf_from_trajectory(H5, param, args)
             else:
                 raise SystemExit('Input file provides neither SSF data nor a trajectory')
 
             # before closing the file, store attributes for later use
-            attrs = _plot.label.attributes(param)
+            attrs = h5md._plot.label.attributes(param)
 
         except IndexError:
             raise SystemExit('invalid phase space sample offset')
-        except tables.exceptions.NoSuchNodeError as what:
+        except KeyError as what:
             raise SystemExit(str(what) + '\nmissing simulation data in file: %s' % fn)
         finally:
             f.close()
@@ -113,6 +105,8 @@ def plot(args):
 
         # optionally fit Ornstein-Zernike form
         if args.fit_ornstein_zernike:
+            import scipy.odr as odr
+
             density = attrs['density']
             temperature = attrs['temperature']
             idx, = where(q <= args.fit_limit)
@@ -133,7 +127,8 @@ def plot(args):
                 print 'Correlation length: {0:g} ± {1:g}'.format(xi, xi_err)
 
             if args.axes == 'loglog' or args.axes == 'xlog':
-                x = logspace(log10(args.xlim[0] or .01), log10(3 * args.fit_limit), num=20)
+                xmin = args.xlim and args.xlim[0] or 0.01
+                x = logspace(log10(xmin), log10(3 * args.fit_limit), num=20)
             else:
                 x = linspace(0, 3 * args.fit_limit, num=20)
             y = ornstein_zernike((kappa, xi), x, density, temperature)
@@ -194,10 +189,16 @@ def plot(args):
 Load precomputed SSF data from HDF5 file
 """
 def load_ssf(H5data, args):
-    idx = [int(x) for x in split(':', args.sample)]
+    import re
+    from numpy import *
+
+    idx = [int(x) for x in re.split(':', args.sample)]
     if len(idx) == 1:
         idx = idx + [-1]
-    ssf = H5data[idx[0]:idx[1]]
+    # FIXME workaround reverse-order selection bug in h5py <= 2.0.0
+    if idx[1] == -1:
+        idx[1] = H5data['sample'].shape[0]
+    ssf = H5data['sample'][idx[0]:idx[1]]
 
     # compute mean
     S_q = mean(ssf[..., 0], axis=0)
@@ -221,8 +222,12 @@ def load_ssf(H5data, args):
 Compute static structure factor from trajectory data
 """
 def ssf_from_trajectory(H5data, param, args):
+    from h5md._plot.ext import _static_structure_factor
+    from re import split
+    from time import time
+
     # backwards compatibility
-    compatibility = 'file_version' not in param._v_attrs
+    compatibility = 'file_version' not in param.attrs.keys()
     if not compatibility:
         samples = H5data.position
     else:
@@ -239,18 +244,18 @@ def ssf_from_trajectory(H5data, param, args):
 
     if not compatibility:
         # positional coordinates dimension
-        dim = param.box._v_attrs.dimension
+        dim = param['box'].attrs['dimension']
         # periodic simulation box length
-        L = param.box._v_attrs.length
+        L = param['box'].attrs['length']
         # number of particles
-        N = sum(param.box._v_attrs.particles)
+        N = sum(param['box'].attrs['particles'])
     else:
         # positional coordinates dimension
-        dim = param.mdsim._v_attrs.dimension
+        dim = param['mdsim'].attrs['dimension']
         # edge lengths of cubic simulation box
-        L = repeat(param.mdsim._v_attrs.box_length, dim)
+        L = repeat(param['mdsim'].attrs['box_length'], dim)
         # number of particles
-        N = sum(param.mdsim._v_attrs.particles)
+        N = sum(param['mdsim'].attrs['particles'])
 
     # unit cell (basis vectors) of reciprocal lattice
     q_basis = float32(2 * pi / L)
@@ -339,7 +344,7 @@ def make_cuda_kernels():
     global ssf_module, tex_q, sum_kernel
 
     # read and compile file ssf_kernel.cu
-    ssf_kernel_source = file(os.path.join(_plot.__path__[0], 'gpu/ssf_kernel.cu')).read()
+    ssf_kernel_source = file(os.path.join(h5md._plot.__path__[0], 'gpu/ssf_kernel.cu')).read()
     ssf_module = SourceModule(ssf_kernel_source, no_extern_c=True)
 
 #    compute_ssf.prepare("PPP", block=(128, 1, 1))
@@ -419,7 +424,7 @@ def ssf_cuda(q, r, block_size=128, copy=True):
 def add_parser(subparsers):
     parser = subparsers.add_parser('ssf', help='static structure factor')
     parser.add_argument('input', nargs='+', metavar='INPUT', help='HDF5 file with trajectory or ssf data')
-    parser.add_argument('--flavour', help='particle flavour')
+    parser.add_argument('--flavour', nargs=2, help='particle flavours')
     parser.add_argument('--sample', help='index of phase space sample(s)')
     parser.add_argument('--q-limit', type=float, help='maximum value of |q|')
     parser.add_argument('--q-error', type=float, help='relative deviation of |q|')
@@ -433,5 +438,5 @@ def add_parser(subparsers):
     parser.add_argument('--block-size', type=int, help='block size to be used for CUDA calls')
     parser.add_argument('--profiling', action='store_true', help='output profiling results and compare with host version')
     parser.add_argument('--verbose', action='store_true')
-    parser.set_defaults(sample='0', q_limit=15, q_error=0.1, fit_limit=.5, block_size=256)
+    parser.set_defaults(flavour=('A', 'A'), sample='0', q_limit=15, q_error=0.1, fit_limit=.5, block_size=256)
 
