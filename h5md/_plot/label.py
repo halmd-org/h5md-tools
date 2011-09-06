@@ -24,8 +24,8 @@ Returns attributes in HDF5 parameter group
 """
 def attributes(param):
     l = {}
-    for node in param:
-        for attr in node._v_attrs._f_list():
-            l[attr] = node._v_attrs.__getattr__(attr)
+    for node in param.itervalues():
+        for k, v in node.attrs.items():
+            l[k] = v
     return l
 
