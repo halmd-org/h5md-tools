@@ -21,15 +21,14 @@
 #
 
 import argparse
-from matplotlib import rc
-import matplotlib
 from _plot import *
 import _plot
 import sys
 
 def main(args):
-    # parse command line arguments
-    args = parse_args()
+    # load packages not before invocation of plot package
+    from matplotlib import rc
+    import matplotlib
 
     # set matplotlib defaults
     rc('font', family='serif', serif=['Computer Modern Roman'])
@@ -51,13 +50,10 @@ def main(args):
 
     # execute plot command
     try:
-        plots[args.command].plot(args)
+        plots[args.plot_command].plot(args)
 
     except SystemExit, status:
         exit('ERROR: %s' % status)
-
-
-plots = dict([(m, sys.modules['_plot.%s' % m]) for m in _plot.__all__])
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('plot', help='plotting H5MD data')
@@ -99,7 +95,9 @@ def add_parser(subparsers):
             ],
             )
 
-    subparsers = parser.add_subparsers(dest='command', help='available plot modules')
+    subparsers = parser.add_subparsers(dest='plot_command', help='available plot modules')
     for plot in plots.itervalues():
         plot.add_parser(subparsers)
+
+plots = dict([(m, sys.modules['h5md._plot.%s' % m]) for m in _plot.__all__])
 
