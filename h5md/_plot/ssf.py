@@ -70,9 +70,8 @@ def plot(args):
 
             elif 'trajectory' in f.keys():
                 # compute SSF from trajectory data
-                H5 = H5['trajectory/{0}'.format(args.flavour[0])]
-
-                q, S_q = ssf_from_trajectory(H5, param, args)
+                H5 = f['trajectory/' + args.flavour[0]]
+                q, S_q = ssf_from_trajectory(H5['position'], param, args)
             else:
                 raise SystemExit('Input file provides neither SSF data nor a trajectory')
 
@@ -177,8 +176,8 @@ def plot(args):
         l = ax.legend(loc=args.legend)
         l.legendPatch.set_alpha(0.7)
 
-    plt.xlabel(args.xlabel or r'$\lvert\textbf{q}\rvert\sigma$')
-    plt.ylabel(args.ylabel or r'$S(\lvert\textbf{q}\rvert)$')
+    plt.xlabel(args.xlabel or r'Wavenumber $q\sigma$')
+    plt.ylabel(args.ylabel or r'Static structure factor $S(q)$')
 
     if args.output is None:
         plt.show()
@@ -223,39 +222,27 @@ Compute static structure factor from trajectory data
 """
 def ssf_from_trajectory(H5data, param, args):
     from h5md._plot.ext import _static_structure_factor
-    from re import split
     from time import time
-
-    # backwards compatibility
-    compatibility = 'file_version' not in param.attrs.keys()
-    if not compatibility:
-        samples = H5data.position
-    else:
-        print 'compatibility mode'
-        samples = H5data.r
+    from numpy import *
+    import re
 
     # read periodically extended particle positions,
     # read one or several samples, convert to single precision
-    idx = [int(x) for x in split(':', args.sample)]
+    idx = [int(x) for x in re.split(':', args.sample)]
     if len(idx) == 1:
-        samples = array([samples[idx[0]]], dtype=float32)
+        samples = array([H5data['sample'][idx[0]]], dtype=float32)
     elif len(idx) == 2:
-        samples = array(samples[idx[0]:idx[1]], dtype=float32)
+        # FIXME workaround reverse-order selection bug in h5py <= 2.0.0
+        if idx[1] == -1:
+            idx[1] = H5data['sample'].shape[0]
+        samples = array(H5data['sample'][idx[0]:idx[1]], dtype=float32)
 
-    if not compatibility:
-        # positional coordinates dimension
-        dim = param['box'].attrs['dimension']
-        # periodic simulation box length
-        L = param['box'].attrs['length']
-        # number of particles
-        N = sum(param['box'].attrs['particles'])
-    else:
-        # positional coordinates dimension
-        dim = param['mdsim'].attrs['dimension']
-        # edge lengths of cubic simulation box
-        L = repeat(param['mdsim'].attrs['box_length'], dim)
-        # number of particles
-        N = sum(param['mdsim'].attrs['particles'])
+    # positional coordinates dimension
+    dim = param['box'].attrs['dimension']
+    # periodic simulation box length
+    L = param['box'].attrs['length']
+    # number of particles
+    N = sum(param['box'].attrs['particles'])
 
     # unit cell (basis vectors) of reciprocal lattice
     q_basis = float32(2 * pi / L)
