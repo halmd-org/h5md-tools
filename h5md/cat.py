@@ -3,20 +3,16 @@
 #
 # Copyright © 2011  Felix Höfling
 #
-# concatenate trajectory samples from different H5MD files
+# cat - concatenate trajectory samples from different H5MD files
 #
 # The param group is copied from the first file, only /param/box is adjusted accordingly.
 # Currently, only a single particle species is supported.
 #
 
-from numpy import *
-from os.path import basename
-import argparse
-import h5py
-
-def main():
-    # parse command line options
-    args = parse_args()
+def main(args):
+    from numpy import array, concatenate, prod, where
+    from os.path import basename
+    import h5py
 
     if len(args.input) < 2:
         print 'Need 2 input files at least'
@@ -125,14 +121,11 @@ def main():
         for (f,r,v) in input:
             f.close()
 
-def parse_args():
-    parser = argparse.ArgumentParser(prog='h5md_cat')
-    parser.add_argument('input', metavar='INPUT', nargs='+', help='HDF5 trajectory files')
+def add_parser(subparsers):
+    parser = subparsers.add_parser('cat', help='concatenate H5MD phase space samples')
+    parser.add_argument('input', metavar='INPUT', nargs='+', help='H5MD files with trajectory data')
     parser.add_argument('-o', '--output', required=True, help='output filename')
     parser.add_argument('--axis', default=-1, type=int, help='concatenation axis')
     parser.add_argument('--sample', default=-1, type=int, help='index of phase space sample')
     parser.add_argument('--spacing', default=0, type=float, help='spacing between concatenated samples')
-    return parser.parse_args()
 
-if __name__ == '__main__':
-    main()
