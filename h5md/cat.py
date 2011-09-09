@@ -18,16 +18,7 @@ def main(args):
         print 'Need 2 input files at least'
         return
 
-    # open output file
     try:
-        of = h5py.File(args.output, 'w')
-    except IOError:
-        raise SystemExit('Failed to write HDF5 file: %s' % fn)
-
-    try:
-        # create group 'trajectory'
-        H5out = of.create_group('trajectory/A')
-
         # open input files
         input = []
         box_length = []
@@ -35,28 +26,14 @@ def main(args):
             try:
                 f = h5py.File(fn, 'r')
             except IOError:
-                print 'Failed to open HDF5 file: %s' % fn
-                print 'Skipped\n'
+                print 'Failed to open H5MD file: {0}. Skipped'.format(fn)
                 continue
             H5in = f['trajectory/A']
 
             try:
                 # on first input file
                 if i == 0:
-                    # copy group 'h5md' # FIXME these entries should be updated
-                    f.copy('h5md', of)
-                    # copy group 'halmd'
-                    f.copy('halmd', of)
-                    dimension = of['halmd/box'].attrs['dimension']
-                    # copy group 'box'
-                    f.copy('trajectory/box', of['trajectory'])
-                    # create group 'time' and append time stamp of last sample
-                    shape = H5in['position/time'].shape # workaround reverse slicing bug
-                    group = H5out.require_group('position')
-                    ds = group.create_dataset('time', data=(H5in['position/time'][shape[0]-1],), maxshape=(None,))
-                    H5out.require_group('velocity')['time'] = ds # make hard link
-                    ds = group.create_dataset('step', data=(H5in['position/step'][shape[0]-1],), maxshape=(None,))
-                    H5out.require_group('velocity')['step'] = ds
+                    dimension = f['halmd/box'].attrs['dimension']
                 else:
                     # check that dimension and box size are compatible
                     if f['halmd/box'].attrs['dimension'] != dimension:
@@ -72,6 +49,51 @@ def main(args):
             except KeyError:
                 f.close()
                 raise SystemExit('Missing trajectory data in file: %s' % fn)
+
+        # determine size of resulting box
+        box_length_out = box_length[0].copy() # deep copy, don't store just a reference!
+        box_length_out[args.axis] = sum(array(box_length)[:, args.axis])
+
+        # output particle numbers and box extents
+        if args.verbose:
+            for i, (f,r,v) in enumerate(input):
+                print 'input file #{0:d}: {1:s}'.format(i+1, f.filename)
+            print 'Use phase space sample {0}'.format(args.sample)
+            axis_name = { 0: '1st', 1: '2nd', 2: '3rd', 3: '4th', -1: 'last' }
+            print 'Concatenate along {0} axis'.format(axis_name[args.axis])
+            print 'Introduce spacing of {0} by compression'.format(args.spacing)
+            print '\n    particles   box extents'
+            npart = 0
+            for i, (f,r,v) in enumerate(input):
+                print '#{0:d}: {1:8d}   {2}'.format(i+1, r.shape[1], box_length[i])
+                npart += r.shape[1]
+            print '\n=>  {0:8d}   {1}'.format(npart, box_length_out)
+
+        if args.dry_run:
+            return
+
+        # open output file
+        try:
+            of = h5py.File(args.output, 'w')
+        except IOError:
+            raise SystemExit('Failed to write H5MD file: {0}'.format(args.output))
+        H5out = of.create_group('trajectory/A')
+
+        # copy group 'h5md' from first input file # FIXME these entries should be updated
+        (f,r,v) = input[0]
+        H5in = f['trajectory/A']
+        f.copy('h5md', of)
+        # copy group 'halmd'
+        f.copy('halmd', of)
+        # copy group 'box'
+        f.copy('trajectory/box', of['trajectory'])
+        # create group 'time' and append time stamp of last sample
+        shape = H5in['position/time'].shape # workaround reverse slicing bug
+        group = H5out.require_group('position')
+        ds = group.create_dataset('time', data=(H5in['position/time'][shape[0]-1],), maxshape=(None,))
+        H5out.require_group('velocity')['time'] = ds # make hard link
+        ds = group.create_dataset('step', data=(H5in['position/step'][shape[0]-1],), maxshape=(None,))
+        H5out.require_group('velocity')['step'] = ds
 
         # store input file names and spacing parameter
         group = of.create_group('h5md_cat/input')
@@ -106,18 +128,17 @@ def main(args):
         )
 
         # update box length, particle number, and average density
-        box_length_ = box_length[0]
-        box_length_[args.axis] = sum(array(box_length)[:, args.axis])
-        of['halmd/box'].attrs.modify('length', box_length_)
+        of['halmd/box'].attrs.modify('length', box_length_out)
         of['halmd/box'].attrs.modify('particles', array([position.shape[0],]))
-        of['halmd/box'].attrs.modify('density', position.shape[0] / prod(box_length_)) 
+        of['halmd/box'].attrs.modify('density', position.shape[0] / prod(box_length_out)) 
 
-        of['trajectory/box/edges'][args.axis, args.axis] = box_length_[args.axis]
+        of['trajectory/box/edges'][args.axis, args.axis] = box_length_out[args.axis]
         of['trajectory/box/offset'][args.axis] = box_offset
+
+        of.close()
 
     finally:
         # close files
-        of.close()
         for (f,r,v) in input:
             f.close()
 
@@ -125,6 +146,8 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('cat', help='concatenate H5MD phase space samples')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='H5MD files with trajectory data')
     parser.add_argument('-o', '--output', required=True, help='output filename')
+    parser.add_argument('-n', '--dry-run', action='store_true', help='perform a quick trial run without generating the output file')
+    parser.add_argument('-v', '--verbose', action='store_true', help='print detailed information')
     parser.add_argument('--axis', default=-1, type=int, help='concatenation axis')
     parser.add_argument('--sample', default=-1, type=int, help='index of phase space sample')
     parser.add_argument('--spacing', default=0, type=float, help='spacing between concatenated samples')
