@@ -100,6 +100,8 @@ def plot(args):
             if args.xlim:
                 idx = where((x >= args.xlim[0]) & (x <= args.xlim[1]))
                 x, y = x[idx], y[idx]
+            else:
+                x, y = asarray(x), asarray(y) # copy HDF5 dataset to NumPy array
 
             y_mean, y_std = mean(y), std(y)
 
