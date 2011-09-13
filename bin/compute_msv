@@ -84,7 +84,11 @@ def main():
 
             # iterate over datasets
             for dset in args.datasets:
-                data = H5._v_leaves[dset]
+                # support z-component of mean velocity
+                dset_ = (dset == 'VZ') and 'VCM' or dset
+                data = H5._v_leaves[dset_]
+                if dset == 'VZ':
+                    data = data[..., -1]
 
                 # skip first number of values
                 values = data[args.skip:]
@@ -122,7 +126,7 @@ def main():
                     print '{0:<12.6g} {1:<10.3g} '.format(*std_values),
                 else:
                     try:
-                        desc = H5._v_leaves[dset]._v_attrs.description
+                        desc = H5._v_leaves[dset_]._v_attrs.description
                     except tables.exceptions.NoSuchNodeError:
                         desc = dset.lower()
                     print '{0:s}: {1:.4g} ± {2:.3g}'.format(
