@@ -78,30 +78,32 @@ def plot(args):
             dim = H5param['box'].attrs['dimension']
             timestep = H5param.attrs['timestep']
 
-            x = H5[dset]['time']
-            data = array(H5[dset]['sample'])
-            # add total energy to energy of chain variables
-            if args.type == 'ENHC':
-                data = data + array(H5['total_energy/sample']);
-
-            if args.type == 'VCM':
-                # calculate center of velocity magnitude
-                if dim == 3:
-                    y = sqrt(data[:, 0] * data[:, 0] + data[:, 1] * data[:, 1] + data[:, 2] * data[:, 2])
-                else:
-                    y = sqrt(data[:, 0] * data[:, 0] + data[:, 1] * data[:, 1])
-            elif args.type == 'VZ' and dim == 3:
-                y = data[:, 2]
-            else:
-                y = data # data.flatten()
-
-            y_zero = y[0]
-
+            # open HDF5 datasets and convert to NumPy array
+            #
+            # This can be improved with respect to performance for the
+            # case that only a small subset of the data is requested via args.xlim.
+            x = asarray(H5[dset]['time'])
+            y = asarray(H5[dset]['sample'])
             if args.xlim:
                 idx = where((x >= args.xlim[0]) & (x <= args.xlim[1]))
                 x, y = x[idx], y[idx]
-            else:
-                x, y = asarray(x), asarray(y) # copy HDF5 dataset to NumPy array
+
+            if args.type == 'VCM':
+                # calculate center of velocity magnitude
+                y = sqrt(sum(pow(y, 2), axis=-1))
+            elif args.type == 'VZ':
+                # select last velocity component
+                y = y[:, dim - 1]
+            elif args.type == 'ENHC':
+                # add total energy to energy of chain variables
+                y_ = H5['total_energy/sample']
+                if y_.shape != H5[dset]['sample'].shape:
+                    raise SystemExit('Sampling rates of total_energy and {0} disagree'.format(dset))
+                if 'idx' in locals():
+                    y_ = asarray(y_)[idx]
+                y = y + asarray(y_)
+
+            y_zero = y[0]
 
             y_mean, y_std = mean(y), std(y)
 
