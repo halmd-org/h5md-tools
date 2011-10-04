@@ -1,1 +1,1 @@
-__all__ = ["cat", "plot", "test"]
+__all__ = ["cat", "compute", "plot", "test"]
