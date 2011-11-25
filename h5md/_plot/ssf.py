@@ -193,10 +193,7 @@ def load_ssf(H5data, args):
 
     idx = [int(x) for x in re.split(':', args.sample)]
     if len(idx) == 1:
-        idx = idx + [-1]
-    # FIXME workaround reverse-order selection bug in h5py <= 2.0.0
-    if idx[1] == -1:
-        idx[1] = H5data['sample'].shape[0]
+        idx = idx + [idx[0] + 1,]
     ssf = H5data['sample'][idx[0]:idx[1]]
 
     # compute mean
@@ -230,12 +227,8 @@ def ssf_from_trajectory(H5data, param, args):
     # read one or several samples, convert to single precision
     idx = [int(x) for x in re.split(':', args.sample)]
     if len(idx) == 1:
-        samples = array([H5data['sample'][idx[0]]], dtype=float32)
-    elif len(idx) == 2:
-        # FIXME workaround reverse-order selection bug in h5py <= 2.0.0
-        if idx[1] == -1:
-            idx[1] = H5data['sample'].shape[0]
-        samples = array(H5data['sample'][idx[0]:idx[1]], dtype=float32)
+        idx = idx + [idx[0] + 1,]
+    samples = array(H5data['sample'][idx[0]:idx[1]], dtype=float32)
 
     # positional coordinates dimension
     dim = param['box'].attrs['dimension']
@@ -327,11 +320,13 @@ def ssf_from_trajectory(H5data, param, args):
 def make_cuda_kernels():
     from pycuda.compiler import SourceModule
     from pycuda.reduction import ReductionKernel
+    from os.path import join
+    import h5md._plot
 
     global ssf_module, tex_q, sum_kernel
 
     # read and compile file ssf_kernel.cu
-    ssf_kernel_source = file(os.path.join(h5md._plot.__path__[0], 'gpu/ssf_kernel.cu')).read()
+    ssf_kernel_source = file(join(h5md._plot.__path__[0], 'gpu/ssf_kernel.cu')).read()
     ssf_module = SourceModule(ssf_kernel_source, no_extern_c=True)
 
 #    compute_ssf.prepare("PPP", block=(128, 1, 1))
@@ -339,6 +334,8 @@ def make_cuda_kernels():
 def ssf_cuda(q, r, block_size=128, copy=True):
     import pycuda.driver as cuda
     import pycuda.gpuarray as ga
+    from time import time
+    from numpy import prod, float32, int32
 
     nq, dim = q.shape
     npart = r.shape[0]
