@@ -84,9 +84,10 @@ def plot(args):
             # case that only a small subset of the data is requested via args.xlim.
             x = asarray(H5[dset]['time'])
             y = asarray(H5[dset]['sample'])
+            step = asarray(H5[dset]['step'])
             if args.xlim:
                 idx = where((x >= args.xlim[0]) & (x <= args.xlim[1]))
-                x, y = x[idx], y[idx]
+                x, y, step = x[idx], y[idx], step[idx]
 
             if args.type == 'VCM':
                 # calculate center of velocity magnitude
@@ -96,12 +97,18 @@ def plot(args):
                 y = y[:, dim - 1]
             elif args.type == 'ENHC':
                 # add total energy to energy of chain variables
+                # deal with possibly different sampling intervals of the two data sets
                 y_ = H5['total_energy/sample']
-                if y_.shape != H5[dset]['sample'].shape:
-                    raise SystemExit('Sampling rates of total_energy and {0} disagree'.format(dset))
-                if 'idx' in locals():
-                    y_ = asarray(y_)[idx]
-                y = y + asarray(y_)
+                step_ = H5['total_energy/step']
+
+                # form intersection of both 'step' sets and construct indexing arrays
+                step_intersect = intersect1d(step, step_)
+                idx = where(in1d(step, step_intersect))
+                idx_ = where(in1d(step_, step_intersect))
+
+                # restrict x, y to points that appear in y_ as well
+                x, y = x[idx], y[idx]
+                y = y + asarray(y_)[idx_]   # finally add data
 
             y_zero = y[0]
 
