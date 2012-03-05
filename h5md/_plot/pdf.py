@@ -161,8 +161,11 @@ def pdf_from_trajectory(H5data, param, args):
     # read one or several samples, convert to single precision
     idx = [int(x) for x in re.split(':', args.sample)]
     if len(idx) == 1:
-        idx = idx + [idx[0] + 1,]
-    samples = array(H5data['sample'][idx[0]:idx[1]], dtype=float32)
+        samples = array([H5data['sample'][idx[0]],], dtype=float32)
+    elif len(idx) == 2:
+        samples = array(H5data['sample'][idx[0]:idx[1]], dtype=float32)
+    elif len(idx) == 3:
+        samples = array(H5data['sample'][idx[0]:idx[1]:idx[2]], dtype=float32)
 
     # positional coordinates dimension
     dim = param['box'].attrs['dimension']
