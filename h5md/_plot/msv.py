@@ -72,7 +72,7 @@ def plot(args):
 
         try:
             H5 = f['observables']
-            H5param = f['halmd']
+            H5param = ('halmd' in f.keys() and ['halmd']) or f['parameters'] # backwards compatibility
 
             # positional coordinates dimension
             dim = H5param['box'].attrs['dimension']

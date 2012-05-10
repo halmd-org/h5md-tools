@@ -59,7 +59,7 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         try:
-            param = f['halmd']
+            param = ('halmd' in f.keys() and ['halmd']) or f['parameters'] # backwards compatibility
 
             # determine file type, prefer precomputed SSF data
             if 'structure' in f.keys() and 'ssf' in f['structure'].keys():

@@ -79,7 +79,7 @@ def main(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f['observables']
-        H5param = f['halmd']
+        H5param = ('halmd' in f.keys() and ['halmd']) or f['parameters'] # backwards compatibility
 
         msv_mean = dict()      # mean values of observable
         msv_std = dict()       # standard deviation of observable (fluctuations)
