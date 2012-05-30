@@ -88,7 +88,10 @@ def main(args):
             dimension = H5param['box'].attrs['dimension']
             density = H5param['box'].attrs['density']
             npart = sum(H5param['box'].attrs['particles']).astype(int)
-            force_param = H5param[H5param.attrs['force']]
+            force_param = H5param[ # for backwards compatibility
+                'potential' in H5param.attrs.keys() and H5param.attrs['potential']
+                or H5param.attrs['force']
+            ]
             if 'cutoff' in force_param.attrs.keys():
                 cutoff = force_param.attrs['cutoff'][0]
             else:
