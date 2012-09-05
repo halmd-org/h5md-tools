@@ -72,7 +72,7 @@ def plot(args):
 
         try:
             H5 = f['observables']
-            H5param = ('halmd' in f.keys() and ['halmd']) or f['parameters'] # backwards compatibility
+            H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
 
             # positional coordinates dimension
             dim = H5param['box'].attrs['dimension']
@@ -83,7 +83,7 @@ def plot(args):
             # This can be improved with respect to performance for the
             # case that only a small subset of the data is requested via args.xlim.
             x = asarray(H5[dset]['time'])
-            y = asarray(H5[dset]['sample'])
+            y = asarray(H5[dset][('sample' in H5[dset].keys() and 'sample') or 'value']) # backwards compatibility
             step = asarray(H5[dset]['step'])
             if args.xlim:
                 idx = where((x >= args.xlim[0]) & (x <= args.xlim[1]))
@@ -98,7 +98,8 @@ def plot(args):
             elif args.type == 'ENHC':
                 # add total energy to energy of chain variables
                 # deal with possibly different sampling intervals of the two data sets
-                y_ = H5['total_energy/sample']
+                H5etot = H5['total_energy']
+                y_ = H5etot[('sample' in H5etot.keys() and 'sample') or 'value'] # backwards compatibility
                 step_ = H5['total_energy/step']
 
                 # form intersection of both 'step' sets and construct indexing arrays

@@ -79,7 +79,7 @@ def main(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f['observables']
-        H5param = ('halmd' in f.keys() and ['halmd']) or f['parameters'] # backwards compatibility
+        H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
 
         msv_mean = dict()      # mean values of observable
         msv_std = dict()       # standard deviation of observable (fluctuations)
@@ -110,7 +110,7 @@ def main(args):
             # iterate over datasets
             for dset in datasets:
                 # open dataset ...
-                values = H5[dset]['sample']
+                values = H5[dset]['sample' in H5[dset].keys() and 'sample' or 'value'] # backwards compatibility
                 # ... and skip first number of entries
                 values = values[args.skip:]
 

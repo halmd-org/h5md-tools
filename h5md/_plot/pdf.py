@@ -41,7 +41,7 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         try:
-            param = ('halmd' in f.keys() and ['halmd']) or f['parameters'] # backwards compatibility
+            param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
 
             # determine file type, prefer precomputed static structure factor data
             if 'structure' in f.keys() and 'ssf' in f['structure'].keys():
@@ -160,12 +160,13 @@ def pdf_from_trajectory(H5data, param, args):
     # read periodically extended particle positions,
     # read one or several samples, convert to single precision
     idx = [int(x) for x in re.split(':', args.sample)]
+    data = H5data['sample' in H5data.keys() and 'sample' or 'value']  # backwards compatibility
     if len(idx) == 1:
-        samples = array([H5data['sample'][idx[0]],], dtype=float32)
+        samples = array([data[idx[0]],], dtype=float32)
     elif len(idx) == 2:
-        samples = array(H5data['sample'][idx[0]:idx[1]], dtype=float32)
+        samples = array(data[idx[0]:idx[1]], dtype=float32)
     elif len(idx) == 3:
-        samples = array(H5data['sample'][idx[0]:idx[1]:idx[2]], dtype=float32)
+        samples = array(data[idx[0]:idx[1]:idx[2]], dtype=float32)
 
     # positional coordinates dimension
     dim = param['box'].attrs['dimension']

@@ -59,7 +59,7 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         try:
-            param = ('halmd' in f.keys() and ['halmd']) or f['parameters'] # backwards compatibility
+            param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
 
             # determine file type, prefer precomputed SSF data
             if 'structure' in f.keys() and 'ssf' in f['structure'].keys():
@@ -228,8 +228,10 @@ def ssf_from_trajectory(H5data, param, args):
     idx = [int(x) for x in re.split(':', args.sample)]
     if len(idx) == 1:
         idx = idx + [idx[0] + 1,]
-    samples = array(H5data['sample'][idx[0]:idx[1]], dtype=float32)
-
+    samples = array(
+        H5data['sample' in H5data.keys() and 'sample' or 'value'][idx[0]:idx[1]] # backwards compatibility
+      , dtype=float32
+    )
     # positional coordinates dimension
     dim = param['box'].attrs['dimension']
     # periodic simulation box length
