@@ -42,6 +42,8 @@ def plot(args):
         'PRESS': 'pressure',
         'TEMP': 'temperature',
         'VCM': 'center_of_mass_velocity',
+        'VX': 'center_of_mass_velocity',
+        'VY': 'center_of_mass_velocity',
         'VZ': 'center_of_mass_velocity',
         'XVIR': 'hypervirial',
     }
@@ -72,11 +74,8 @@ def plot(args):
 
         try:
             H5 = f['observables']
-            H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
-
-            # positional coordinates dimension
-            dim = H5param['box'].attrs['dimension']
-            timestep = H5param.attrs['timestep']
+            if args.group:
+                H5 = H5[args.group]
 
             # open HDF5 datasets and convert to NumPy array
             #
@@ -92,9 +91,15 @@ def plot(args):
             if args.type == 'VCM':
                 # calculate center of velocity magnitude
                 y = sqrt(sum(pow(y, 2), axis=-1))
+            elif args.type == 'VX':
+                # select first velocity component
+                y = y[:, 0]
+            elif args.type == 'VY':
+                # select second velocity component
+                y = y[:, 1]
             elif args.type == 'VZ':
-                # select last velocity component
-                y = y[:, dim - 1]
+                # select third velocity component
+                y = y[:, 2]
             elif args.type == 'ENHC':
                 # add total energy to energy of chain variables
                 # deal with possibly different sampling intervals of the two data sets
@@ -120,6 +125,7 @@ def plot(args):
                 x = linspace(min(x), max(x), num=args.interpolate)
                 y = fi(x)
 
+            H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
             if args.label:
                 attrs = h5md._plot.label.attributes(H5param)
                 attrs['y_zero'] = r'%.2f' % y_zero
@@ -246,6 +252,16 @@ def predefined_label(name):
             r'$\langle\vert\langle \textbf{v}^*\rangle\vert\rangle_{t^*}$',
             r'$\vert\langle \textbf{v}^*(t^*)\rangle\vert - \vert\langle \textbf{v}^*(0)\rangle\vert$',
         ],
+        'VX': [
+            r'$\langle v_x^*(t^*)\rangle$',
+            r'$\langle\langle v_x^*\rangle\rangle_{t^*}$',
+            r'$\langle v_x^*(t^*)\rangle - \langle v_x^*(0)\rangle$',
+        ],
+        'VY': [
+            r'$\langle v_y^*(t^*)\rangle$',
+            r'$\langle\langle v_y^*\rangle\rangle_{t^*}$',
+            r'$\langle v_y^*(t^*)\rangle - \langle v_y^*(0)\rangle$',
+        ],
         'VZ': [
             r'$\langle v_z^*(t^*)\rangle$',
             r'$\langle\langle v_z^*\rangle\rangle_{t^*}$',
@@ -272,7 +288,8 @@ def add_parser(subparsers):
     parser = subparsers.add_parser('msv', help='macroscopic state variables')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='H5MD input file')
     parser.add_argument('--dataset', help='specify dataset')
-    parser.add_argument('--type', choices=['ETOT', 'EPOT', 'EKIN', 'ENHC', 'PRESS', 'TEMP', 'VCM', 'VZ', 'XVIR'], help='equilibrium or stationary property')
+    parser.add_argument('--group', help='specify particle group')
+    parser.add_argument('--type', choices=['ETOT', 'EPOT', 'EKIN', 'ENHC', 'PRESS', 'TEMP', 'VCM', 'VX', 'VY', 'VZ', 'XVIR'], help='equilibrium or stationary property')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
