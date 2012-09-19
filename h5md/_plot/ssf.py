@@ -194,7 +194,7 @@ def load_ssf(H5data, args):
     idx = [int(x) for x in re.split(':', args.sample)]
     if len(idx) == 1:
         idx = idx + [idx[0] + 1,]
-    ssf = H5data['sample'][idx[0]:idx[1]]
+    ssf = H5data['sample' in H5data.keys() and 'sample' or 'value'][idx[0]:idx[1]] # backwards compatibility
 
     # compute mean
     S_q = mean(ssf[..., 0], axis=0)
