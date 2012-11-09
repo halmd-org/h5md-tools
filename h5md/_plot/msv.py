@@ -120,11 +120,6 @@ def plot(args):
 
             y_mean, y_std = mean(y), std(y)
 
-            if args.interpolate:
-                fi = interpolate.interp1d(x, y)
-                x = linspace(min(x), max(x), num=args.interpolate)
-                y = fi(x)
-
             H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
             if args.label:
                 attrs = h5md._plot.label.attributes(H5param)
@@ -144,9 +139,28 @@ def plot(args):
         finally:
             f.close()
 
+        # subtract zero value from data
         if args.zero:
-            # subtract zero value from data
             y = y - y[0];
+
+        # divide data in blocks of given size and compute block averages
+        if args.block_average:
+            block_size = args.block_average
+            shape = list(x.shape)
+            if shape[0] > block_size:
+                # cut arrays to extent of first dimension being a multiple of nblocks
+                a = int(block_size * floor(shape[0] / block_size))
+                x, y = x[:a], y[:a]
+                shape[0] = block_size
+            shape.insert(0, -1)
+            x = mean(reshape(x, shape), axis=1)
+            y = mean(reshape(y, shape), axis=1)
+
+        # put data on linear grid using linear interpolation
+        if args.points:
+            fi = interpolate.interp1d(x, y)
+            x = linspace(min(x), max(x), num=args.points)
+            y = fi(x)
 
         if not len(x) or not len(y):
             raise SystemExit('empty plot range')
@@ -294,7 +308,8 @@ def add_parser(subparsers):
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
     parser.add_argument('--zero', action='store_true', help='substract zero value')
-    parser.add_argument('--interpolate', type=int, help='linear interpolation to given number of plot points')
+    parser.add_argument('--points', type=int, help='number of plot points (linear interpolation)')
+    parser.add_argument('--block-average', type=int, help='plot block averages of given block size')
     parser.add_argument('--inset', metavar='VALUE', type=float, nargs=4, help='plot inset')
     parser.add_argument('--inset-xlim', metavar='VALUE', type=float, nargs=2, help='limit inset x-axis to given range')
     parser.add_argument('--inset-ylim', metavar='VALUE', type=float, nargs=2, help='limit inset y-axis to given range')
