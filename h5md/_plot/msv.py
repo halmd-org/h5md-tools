@@ -120,8 +120,8 @@ def plot(args):
 
             y_mean, y_std = mean(y), std(y)
 
-            H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
             if args.label:
+                H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
                 attrs = h5md._plot.label.attributes(H5param)
                 attrs['y_zero'] = r'%.2f' % y_zero
                 attrs['y_mean'] = r'%.3f' % y_mean
@@ -131,6 +131,7 @@ def plot(args):
                 basen = os.path.splitext(os.path.basename(fn))[0]
                 label = basen.replace('_', r'\_')
             if args.title:
+                H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
                 title = args.title % h5md._plot.label.attributes(H5param)
 
         except KeyError as what:
