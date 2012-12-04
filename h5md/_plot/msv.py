@@ -37,7 +37,7 @@ def plot(args):
     dset_abbrev = {
         'ETOT': 'total_energy',
         'EPOT': 'potential_energy',
-        'EKIN': 'kinetic energy',
+        'EKIN': 'kinetic_energy',
         'ENHC': 'total_energy_nose_hoover_chain',
         'PRESS': 'pressure',
         'TEMP': 'temperature',
