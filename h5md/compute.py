@@ -81,12 +81,12 @@ def main(args):
         H5 = f['observables']
         if args.group:
             H5 = H5[args.group]
-        H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
 
         msv_mean = dict()      # mean values of observable
         msv_std = dict()       # standard deviation of observable (fluctuations)
         try:
-            # read parameters
+            # read parameters for files created by HAL's MD package 0.2.x
+            H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
             dimension = H5param['box'].attrs['dimension']
             density = H5param['box'].attrs['density']
             npart = sum(H5param['box'].attrs['particles']).astype(int)
@@ -108,7 +108,10 @@ def main(args):
                     print 'Cutoff: %g' % cutoff
                 print 'Particles: %d' % npart
                 print 'Density: %.4g' % density
+        except KeyError:
+            pass
 
+        try:
             # iterate over datasets
             for dset in datasets:
                 # open dataset ...
@@ -163,90 +166,91 @@ def main(args):
                 msv_mean[dset] = mean_values
                 msv_std[dset] = std_values
 
-            # tail correction for truncated Lennard-Jones potential
-            if False:  # disabled
-                rc3i = 1 / pow(cutoff, 3)
-                en_corr = (8./9) * pi * density * (rc3i * rc3i - 3.) * rc3i
-                press_corr = (32./9) * pi * pow(density, 2) * (rc3i * rc3i - 1.5) * rc3i
-                print '%.5g  ' % (msv_mean['potential_energy'][0] + en_corr),
-                print '%.5g  ' % (msv_mean['pressure'][0] + press_corr)
-
-            # compute response coefficients
-            if args.ensemble:
-                # specific heat in the microcanonical ensemble (NVE)
-                if 'c_V' in coeff.keys() and args.ensemble == 'nve':
-                    temp = msv_mean['temperature'][0]
-                    temp_err = msv_mean['temperature'][1]
-                    DeltaT = msv_std['temperature'][0]
-                    DeltaT_err = msv_std['temperature'][1]
-                    x =  npart * pow(DeltaT / temp, 2)
-                    coeff['c_V'] = [
-                        1 / (2./3 - x),
-                        # error estimate
-                        x * sqrt(pow(2 * DeltaT_err / DeltaT, 2) + pow(2 * temp_err / temp, 2))
-                    ]
-
-                # specific heat in the canonical ensemble (NVT)
-                if 'c_V' in coeff.keys() and args.ensemble == 'nvt':
-                    temp = msv_mean['temperature'][0]
-                    temp_err = msv_mean['temperature'][1]
-                    Delta_Epot = msv_std['potential_energy'][0]
-                    Delta_Epot_err = msv_std['potential_energy'][1]
-                    Cv_ = npart * pow(Delta_Epot/temp, 2)
-                    coeff['c_V'] = [
-                        .5 * dimension + Cv_,
-                        Cv_ * sqrt(
-                            pow(2 * temp_err / temp, 2)
-                          + pow(2 * Delta_Epot_err / Delta_Epot, 2)
-                        )     # error estimate
-                    ]
-
-                # adiabatic compressibility in the microcanonical ensemble (NVE)
-                # isothermal compressibility in the canonical ensemble (NVT)
-                # 
-                # the formulae look the same, but the interpretation is different
-                if not set(('chi_S','chi_T')).isdisjoint(coeff.keys()):
-                    temp = msv_mean['temperature'][0]
-                    temp_err = msv_mean['temperature'][1]
-                    press = msv_mean['pressure'][0]
-                    press_err = msv_mean['pressure'][1]
-                    DeltaP = msv_std['pressure'][0]
-                    DeltaP_err = msv_std['pressure'][1]
-                    hypervirial = msv_mean['hypervirial'][0]
-                    hypervirial_err = msv_mean['hypervirial'][1]
-                    x = pow(DeltaP, 2) * npart / density / temp
-                    # compressibility
-                    chi = 1 / (2. / dimension * temp * density + press + hypervirial * density - x)
-                    # error estimate
-                    chi_err = pow(chi, 2) * sqrt(
-                        pow((2. / dimension * density + x / temp) * temp_err, 2)
-                      + pow(press_err, 2)
-                      + pow(hypervirial_err * density, 2)
-                      + pow(2 * x * DeltaP_err / DeltaP, 2)
-                    )
-                    if args.ensemble == 'nve':
-                        coeff['chi_S'] = [chi, chi_err]
-                    elif args.ensemble == 'nvt':
-                        coeff['chi_T'] = [chi, chi_err]
-
-                for name in coeff.keys():
-                    if args.table:
-                        print '{0:<12.6g} {1:<10.3g} '.format(*coeff[name]),
-                    else:
-                        desc = description[name].capitalize()
-                        print '{0:s}: {1:.4g} ± {2:.3g}'.format(desc, coeff[name][0], coeff[name][1])
-                    # clear data after output
-                    coeff[name] = []
-
-            # finish output line
-            print
-
         except KeyError:
             print 'missing simulation data in file: %s' % fn
             print 'Skipped\n'
 
         finally:
             f.close()
+
+        # tail correction for truncated Lennard-Jones potential
+        if False:  # disabled
+            rc3i = 1 / pow(cutoff, 3)
+            en_corr = (8./9) * pi * density * (rc3i * rc3i - 3.) * rc3i
+            press_corr = (32./9) * pi * pow(density, 2) * (rc3i * rc3i - 1.5) * rc3i
+            print '%.5g  ' % (msv_mean['potential_energy'][0] + en_corr),
+            print '%.5g  ' % (msv_mean['pressure'][0] + press_corr)
+
+        # compute response coefficients
+        if args.ensemble:
+            # specific heat in the microcanonical ensemble (NVE)
+            if 'c_V' in coeff.keys() and args.ensemble == 'nve':
+                temp = msv_mean['temperature'][0]
+                temp_err = msv_mean['temperature'][1]
+                DeltaT = msv_std['temperature'][0]
+                DeltaT_err = msv_std['temperature'][1]
+                x =  npart * pow(DeltaT / temp, 2)
+                coeff['c_V'] = [
+                    1 / (2./3 - x),
+                    # error estimate
+                    x * sqrt(pow(2 * DeltaT_err / DeltaT, 2) + pow(2 * temp_err / temp, 2))
+                ]
+
+            # specific heat in the canonical ensemble (NVT)
+            if 'c_V' in coeff.keys() and args.ensemble == 'nvt':
+                temp = msv_mean['temperature'][0]
+                temp_err = msv_mean['temperature'][1]
+                Delta_Epot = msv_std['potential_energy'][0]
+                Delta_Epot_err = msv_std['potential_energy'][1]
+                Cv_ = npart * pow(Delta_Epot/temp, 2)
+                coeff['c_V'] = [
+                    .5 * dimension + Cv_,
+                    Cv_ * sqrt(
+                        pow(2 * temp_err / temp, 2)
+                      + pow(2 * Delta_Epot_err / Delta_Epot, 2)
+                    )     # error estimate
+                ]
+
+            # adiabatic compressibility in the microcanonical ensemble (NVE)
+            # isothermal compressibility in the canonical ensemble (NVT)
+            #
+            # the formulae look the same, but the interpretation is different
+            if not set(('chi_S','chi_T')).isdisjoint(coeff.keys()):
+                temp = msv_mean['temperature'][0]
+                temp_err = msv_mean['temperature'][1]
+                press = msv_mean['pressure'][0]
+                press_err = msv_mean['pressure'][1]
+                DeltaP = msv_std['pressure'][0]
+                DeltaP_err = msv_std['pressure'][1]
+                hypervirial = msv_mean['hypervirial'][0]
+                hypervirial_err = msv_mean['hypervirial'][1]
+                x = pow(DeltaP, 2) * npart / density / temp
+                # compressibility
+                chi = 1 / (2. / dimension * temp * density + press + hypervirial * density - x)
+                # error estimate
+                chi_err = pow(chi, 2) * sqrt(
+                    pow((2. / dimension * density + x / temp) * temp_err, 2)
+                  + pow(press_err, 2)
+                  + pow(hypervirial_err * density, 2)
+                  + pow(2 * x * DeltaP_err / DeltaP, 2)
+                )
+                if args.ensemble == 'nve':
+                    coeff['chi_S'] = [chi, chi_err]
+                elif args.ensemble == 'nvt':
+                    coeff['chi_T'] = [chi, chi_err]
+
+            for name in coeff.keys():
+                if args.table:
+                    print '{0:<12.6g} {1:<10.3g} '.format(*coeff[name]),
+                else:
+                    desc = description[name].capitalize()
+                    print '{0:s}: {1:.4g} ± {2:.3g}'.format(desc, coeff[name][0], coeff[name][1])
+                # clear data after output
+                coeff[name] = []
+
+        # finish output line
+        print
+
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('compute', help='compute averages of macroscopic state variables')
