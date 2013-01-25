@@ -79,6 +79,8 @@ def main(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         H5 = f['observables']
+        if args.group:
+            H5 = H5[args.group]
         H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
 
         msv_mean = dict()      # mean values of observable
@@ -249,6 +251,7 @@ def main(args):
 def add_parser(subparsers):
     parser = subparsers.add_parser('compute', help='compute averages of macroscopic state variables')
     parser.add_argument('input', metavar='INPUT', nargs='+', help='H5MD file')
+    parser.add_argument('--group', help='specify particle group')
     parser.add_argument('--datasets', metavar='NAME', nargs='+', help='list of data sets in group \'/observables\'')
     parser.add_argument('--blocks', type=int, help='number of blocks for error estimate')
     parser.add_argument('--skip', type=int, help='number of data points to skip from the beginning')
