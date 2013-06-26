@@ -2,7 +2,8 @@
 #
 # ssf - compute, plot, and fit static structure factor
 #
-# Copyright © 2008-2011  Peter Colberg, Felix Höfling
+# Copyright © 2008-2013 Felix Höfling
+# Copyright © 2008-2011 Peter Colberg
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -59,16 +60,20 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         try:
-            param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
+            try:
+                param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
+            except KeyError:
+                param = None
 
             # determine file type, prefer precomputed SSF data
-            if 'structure' in f.keys() and 'ssf' in f['structure'].keys():
+            ssf_path = 'structure/' + '/'.join(args.flavour) + '/static_structure_factor'
+            if ssf_path in f:
                 # load SSF from file
-                H5 = f['structure/ssf/' + '/'.join(args.flavour)]
-                q = f['structure/ssf/wavenumber'].__array__() # store in memory by conversion to NumPy array
+                H5 = f[ssf_path]
+                q = H5['wavenumber'].__array__() # store in memory by conversion to NumPy array
                 S_q, S_q_err = load_ssf(H5, args)
 
-            elif 'trajectory' in f.keys():
+            elif 'trajectory' in f.keys() and param:
                 # compute SSF from trajectory data
                 H5 = f['trajectory/' + args.flavour[0]]
                 q, S_q = ssf_from_trajectory(H5['position'], param, args)
@@ -76,7 +81,10 @@ def plot(args):
                 raise SystemExit('Input file provides neither SSF data nor a trajectory')
 
             # before closing the file, store attributes for later use
-            attrs = h5md._plot.label.attributes(param)
+            if param:
+                attrs = h5md._plot.label.attributes(param)
+            else:
+                attrs = {}
 
         except IndexError:
             raise SystemExit('invalid phase space sample offset')
