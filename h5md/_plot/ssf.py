@@ -73,6 +73,12 @@ def plot(args):
                 q = H5['wavenumber'].__array__() # store in memory by conversion to NumPy array
                 S_q, S_q_err = load_ssf(H5, args)
 
+            elif 'structure/ssf/' + '/'.join(args.flavour) in f: # backwards compatibility
+                # load SSF from file
+                H5 = f['structure/ssf/' + '/'.join(args.flavour)]
+                q = f['structure/ssf/wavenumber'].__array__() # store in memory by conversion to NumPy array
+                S_q, S_q_err = load_ssf(H5, args)
+
             elif 'trajectory' in f.keys() and param:
                 # compute SSF from trajectory data
                 H5 = f['trajectory/' + args.flavour[0]]
