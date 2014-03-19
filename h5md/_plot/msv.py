@@ -20,21 +20,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
-# dictionary with dataset abbreviations
-dset_abbrev = {
-    'PRESS': 'pressure',
-    'TEMP': 'temperature',
-    'DENS': 'density',
-    'EPOT': 'potential_energy',
-    'EKIN': 'kinetic_energy',
-    'EINT': 'internal_energy',
-    'ENHC': 'nose_hoover_chain/internal_energy',
-    'ENTH': 'enthalpy',
-    'VCM': 'center_of_mass_velocity',
-    'VX': 'center_of_mass_velocity',
-    'VY': 'center_of_mass_velocity',
-    'VZ': 'center_of_mass_velocity',
-}
+from .._common import dset_abbrev
 
 def plot(args):
     """

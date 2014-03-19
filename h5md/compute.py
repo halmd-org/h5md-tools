@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright © 2010-2011  Felix Höfling
+# Copyright © 2010-2014 Felix Höfling
 #
 # compute - compute time averages of macroscopic state variables
 # from the 'observables' group of an H5MD file
 #
 
 def main(args):
+    from _common import dset_abbrev
+
     from numpy import concatenate, floor, linalg, mean, reshape, sqrt, std
     from math import pi
     import h5py
@@ -20,22 +22,8 @@ def main(args):
         'chi_S': 'adiabatic compressibility',
     }
 
-    # abbreviations of dataset names FIXME unify with plot/msv and move to separate module
-    dset_abbrev = {
-        'ETOT': 'total_energy',
-        'EPOT': 'potential_energy',
-        'EKIN': 'kinetic_energy',
-        'ENHC': 'total_energy_nose_hoover_chain',
-        'PRESS': 'pressure',
-        'TEMP': 'temperature',
-        'VCM': 'center_of_mass_velocity',
-        'XVIR': 'hypervirial',
-    }
-
     # convert abbreviations to full qualifiers
-    datasets = []
-    for dset in args.datasets:
-        datasets.append(dset in dset_abbrev.keys() and dset_abbrev[dset] or dset)
+    datasets = [dset in dset_abbrev.keys() and dset_abbrev[dset] or dset for dset in args.datasets]
 
     # optional response coefficients
     coeff = {}
