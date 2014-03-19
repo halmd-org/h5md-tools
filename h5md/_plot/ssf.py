@@ -61,7 +61,7 @@ def plot(args):
 
         try:
             try:
-                param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
+                param = f['parameters']
             except KeyError:
                 param = None
 
@@ -73,15 +73,9 @@ def plot(args):
                 q = H5['wavenumber'].__array__() # store in memory by conversion to NumPy array
                 S_q, S_q_err = load_ssf(H5, args)
 
-            elif 'structure/ssf/' + '/'.join(args.flavour) in f: # backwards compatibility
-                # load SSF from file
-                H5 = f['structure/ssf/' + '/'.join(args.flavour)]
-                q = f['structure/ssf/wavenumber'].__array__() # store in memory by conversion to NumPy array
-                S_q, S_q_err = load_ssf(H5, args)
-
-            elif 'trajectory' in f.keys() and param:
+            elif 'particles' in f.keys() and param:
                 # compute SSF from trajectory data
-                H5 = f['trajectory/' + args.flavour[0]]
+                H5 = f['particles/' + args.flavour[0]] # FIXME support flavour[0] != flavour[1]
                 q, S_q = ssf_from_trajectory(H5['position'], param, args)
             else:
                 raise SystemExit('Input file provides neither SSF data nor a trajectory')
@@ -208,7 +202,7 @@ def load_ssf(H5data, args):
     idx = [int(x) for x in re.split(':', args.sample)]
     if len(idx) == 1:
         idx = idx + [idx[0] + 1,]
-    ssf = H5data['sample' in H5data.keys() and 'sample' or 'value'][idx[0]:idx[1]] # backwards compatibility
+    ssf = H5data['value'][idx[0]:idx[1]]
 
     # compute mean
     S_q = mean(ssf[..., 0], axis=0)
@@ -243,7 +237,7 @@ def ssf_from_trajectory(H5data, param, args):
     if len(idx) == 1:
         idx = idx + [idx[0] + 1,]
     samples = array(
-        H5data['sample' in H5data.keys() and 'sample' or 'value'][idx[0]:idx[1]] # backwards compatibility
+        H5data['value'][idx[0]:idx[1]]
       , dtype=float32
     )
     # positional coordinates dimension

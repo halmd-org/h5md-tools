@@ -41,7 +41,7 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         try:
-            param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
+            param = f['parameters']
 
             # determine file type, prefer precomputed static structure factor data
             if 'structure' in f.keys() and 'ssf' in f['structure'].keys():
@@ -71,9 +71,9 @@ def plot(args):
                 pdf = 1 + pdf / density # add δ-contribution
                 pdf_err = pdf_err / density
 
-            elif 'trajectory' in f.keys():
+            elif 'particles' in f.keys():
                 # compute SSF from trajectory data
-                H5 = f['trajectory/' + args.flavour[0]]
+                H5 = f['particles/' + args.flavour[0]]
                 r, pdf, pdf_err = pdf_from_trajectory(H5['position'], param, args)
             else:
                 raise SystemExit('Input file provides neither data for the static structure factor nor a trajectory')
@@ -160,7 +160,7 @@ def pdf_from_trajectory(H5data, param, args):
     # read periodically extended particle positions,
     # read one or several samples, convert to single precision
     idx = [int(x) for x in re.split(':', args.sample)]
-    data = H5data['sample' in H5data.keys() and 'sample' or 'value']  # backwards compatibility
+    data = H5data['value']
     if len(idx) == 1:
         samples = array([data[idx[0]],], dtype=float32)
     elif len(idx) == 2:
