@@ -2,7 +2,8 @@
 #
 # msv - macroscopic state variables
 #
-# Copyright © 2008-2011  Peter Colberg, Felix Höfling
+# Copyright © 2008-2014 Felix Höfling
+# Copyright © 2008-2011 Peter Colberg
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,14 +20,29 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
+# dictionary with dataset abbreviations
+dset_abbrev = {
+    'PRESS': 'pressure',
+    'TEMP': 'temperature',
+    'DENS': 'density',
+    'EPOT': 'potential_energy',
+    'EKIN': 'kinetic_energy',
+    'EINT': 'internal_energy',
+    'ENHC': 'nose_hoover_chain/internal_energy',
+    'ENTH': 'enthalpy',
+    'VCM': 'center_of_mass_velocity',
+    'VX': 'center_of_mass_velocity',
+    'VY': 'center_of_mass_velocity',
+    'VZ': 'center_of_mass_velocity',
+}
 
-"""
-Plot macroscopic state variables
-"""
 def plot(args):
+    """
+    Plot macroscopic state variables
+    """
     import os, os.path
     from matplotlib import ticker
-    from numpy import asarray, floor, intersect1d, linspace, mean, std, where
+    from numpy import asarray, floor, in1d, intersect1d, linspace, mean, std, where
     from scipy.interpolate import interpolate
     import sys
     import h5py
@@ -34,19 +50,6 @@ def plot(args):
 
     from matplotlib import pyplot as plot
 
-    dset_abbrev = {
-        'ETOT': 'total_energy',
-        'EPOT': 'potential_energy',
-        'EKIN': 'kinetic_energy',
-        'ENHC': 'total_energy_nose_hoover_chain',
-        'PRESS': 'pressure',
-        'TEMP': 'temperature',
-        'VCM': 'center_of_mass_velocity',
-        'VX': 'center_of_mass_velocity',
-        'VY': 'center_of_mass_velocity',
-        'VZ': 'center_of_mass_velocity',
-        'XVIR': 'hypervirial',
-    }
     # equilibrium or stationary property
     if not args.type and not args.dataset:
         raise SystemExit('Either of the options --type or --dataset is required.')
@@ -67,23 +70,46 @@ def plot(args):
         ax.axhline(y=0, color='black', lw=0.5)
 
     for i, fn in enumerate(args.input):
+        # open H5MD file, version ≥ 1.0
         try:
             f = h5py.File(fn, 'r')
-        except IOError:
-            raise SystemExit('failed to open HDF5 file: %s' % fn)
+            version = f['h5md'].attrs['version']
+            assert(version[0] == 1 and version[1] >= 0)
+        except (AssertionError, IOError, KeyError):
+            raise SystemExit("failed to open H5MD (≥ 1.0) file: {0:s}".format(fn))
+
+        # check for the thermodynamics module ≥ 1.0
+        try:
+            version = f['h5md/modules/thermodynamics'].attrs['version']
+            assert(version[0] == 1 and version[1] >= 0)
+        except (AssertionError, KeyError):
+            raise SystemExit("thermodynamics module (≥ 1.0) not present in H5MD file: {0:s}".format(fn))
+
+        if not 'observables' in f.keys():
+            raise SystemExit("missing /observables group in file: {0:s}".format(fn))
+        H5 = f['observables']
+
+        if args.group:
+            try:
+                H5 = H5[args.group]
+            except KeyError:
+                raise SystemExit("missing group /observables/{0:s} in file: {1:s}".format(args.group, fn))
+
+        if not dset in H5.keys():
+            raise SystemExit("missing H5MD element {0:s}/{1:s} in file: {2:s}".format(H5.name, dset, fn))
+
+        H5element = H5[dset]
+        if type(H5element) != h5py.Group:
+            raise SystemExit("H5MD element {0:s} is time-independent".format(H5element.name))
 
         try:
-            H5 = f['observables']
-            if args.group:
-                H5 = H5[args.group]
-
             # open HDF5 datasets and convert to NumPy array
             #
             # This can be improved with respect to performance for the
             # case that only a small subset of the data is requested via args.xlim.
-            x = asarray(H5[dset]['time'])
-            y = asarray(H5[dset][('sample' in H5[dset].keys() and 'sample') or 'value']) # backwards compatibility
-            step = asarray(H5[dset]['step'])
+            x = asarray(H5element['time'])
+            y = asarray(H5element['value'])
+            step = asarray(H5element['step'])
             if args.xlim:
                 idx = where((x >= args.xlim[0]) & (x <= args.xlim[1]))
                 x, y, step = x[idx], y[idx], step[idx]
@@ -101,11 +127,10 @@ def plot(args):
                 # select third velocity component
                 y = y[:, 2]
             elif args.type == 'ENHC':
-                # add total energy to energy of chain variables
+                # add internal energy to energy of chain variables
                 # deal with possibly different sampling intervals of the two data sets
-                H5etot = H5['total_energy']
-                y_ = H5etot[('sample' in H5etot.keys() and 'sample') or 'value'] # backwards compatibility
-                step_ = H5['total_energy/step']
+                y_ = H5['internal_energy/value']
+                step_ = H5['internal_energy/step']
 
                 # form intersection of both 'step' sets and construct indexing arrays
                 step_intersect = intersect1d(step, step_)
@@ -121,8 +146,8 @@ def plot(args):
             y_mean, y_std = mean(y), std(y)
 
             if args.label:
-                H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
-                attrs = h5md._plot.label.attributes(H5param)
+                if 'parameters' in f.keys:
+                    attrs = h5md._plot.label.attributes(f['parameters'])
                 attrs['y_zero'] = r'%.2f' % y_zero
                 attrs['y_mean'] = r'%.3f' % y_mean
                 attrs['y_std'] = r'%#.2g' % y_std
@@ -130,9 +155,8 @@ def plot(args):
             elif args.legend or not args.small:
                 basen = os.path.splitext(os.path.basename(fn))[0]
                 label = basen.replace('_', r'\_')
-            if args.title:
-                H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
-                title = args.title % h5md._plot.label.attributes(H5param)
+            if args.title and 'parameters' in f.keys:
+                title = args.title % h5md._plot.label.attributes(f['parameters'])
 
         except KeyError as what:
             raise SystemExit(str(what) + '\nmissing simulation data in file: %s' % fn)
@@ -232,7 +256,7 @@ def plot(args):
 def predefined_label(name):
     label = {
         # name: absolute, mean, standard deviation, unit
-        'ETOT': [
+        'EINT': [
             r'$\langle E(t^*)\rangle / \epsilon$',
             r'$\langle\langle E\rangle\rangle_{t^*}$',
             r'$(\langle E(t^*)\rangle - \langle E(0)\rangle) / \epsilon$',
@@ -282,11 +306,6 @@ def predefined_label(name):
             r'$\langle\langle v_z^*\rangle\rangle_{t^*}$',
             r'$\langle v_z^*(t^*)\rangle - \langle v_z^*(0)\rangle$',
         ],
-        'XVIR': [
-            r'$\langle X^*(t^*)\rangle$',
-            r'$\langle\langle X^*\rangle\rangle_{t^*}$',
-            r'$\langle X^*(t^*)\rangle - \langle X^*(0)\rangle$',
-        ],
     }
 
     if name in label.keys():
@@ -304,7 +323,7 @@ def add_parser(subparsers):
     parser.add_argument('input', metavar='INPUT', nargs='+', help='H5MD input file')
     parser.add_argument('--dataset', help='specify dataset')
     parser.add_argument('--group', help='specify particle group')
-    parser.add_argument('--type', choices=['ETOT', 'EPOT', 'EKIN', 'ENHC', 'PRESS', 'TEMP', 'VCM', 'VX', 'VY', 'VZ', 'XVIR'], help='equilibrium or stationary property')
+    parser.add_argument('--type', choices=dset_abbrev.keys(), help='equilibrium or stationary property')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')
