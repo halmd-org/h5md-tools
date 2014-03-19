@@ -17,7 +17,7 @@ module1 = Extension('h5md._plot.ext',
                      extra_compile_args = ['-O3', '-fopenmp', '-mtune=native', '-Wall'],
                      extra_link_args = ['-fopenmp'])
 
-setup(name = 'h5md',
+setup(name = 'h5md-tools',
       version = parse_git_version(),
       description = 'Toolset for H5MD files',
       author = ('Felix Höfling'),
