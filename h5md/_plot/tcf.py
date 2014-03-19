@@ -98,7 +98,7 @@ def plot(args):
         x = x.flatten()
 
         # sort data by ascending time
-        idx = x.argsort()
+        idx = x.argsort(kind='mergesort')
         x, y = x[idx], y[idx]
         if yerr != None:
             yerr = yerr[idx]
