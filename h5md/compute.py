@@ -62,41 +62,49 @@ def main(args):
 
     # equilibrium or stationary property
     for i, fn in enumerate(args.input):
+        # open H5MD file, version ≥ 1.0
         try:
-            f = h5py.File(fn, mode='r')
-        except IOError:
-            raise SystemExit('failed to open HDF5 file: %s' % fn)
+            f = h5py.File(fn, 'r')
+            version = f['h5md'].attrs['version']
+            assert(version[0] == 1 and version[1] >= 0)
+        except (AssertionError, IOError, KeyError):
+            raise SystemExit("failed to open H5MD (≥ 1.0) file: {0:s}".format(fn))
 
+        # check for the thermodynamics module ≥ 1.0
+        try:
+            version = f['h5md/modules/thermodynamics'].attrs['version']
+            assert(version[0] == 1 and version[1] >= 0)
+        except (AssertionError, KeyError):
+            raise SystemExit("thermodynamics module (≥ 1.0) not present in H5MD file: {0:s}".format(fn))
+
+        if not 'observables' in f.keys():
+            raise SystemExit("missing /observables group in file: {0:s}".format(fn))
         H5 = f['observables']
+
         if args.group:
-            H5 = H5[args.group]
+            try:
+                H5 = H5[args.group]
+            except KeyError:
+                raise SystemExit("missing group /observables/{0:s} in file: {1:s}".format(args.group, fn))
 
         msv_mean = dict()      # mean values of observable
         msv_std = dict()       # standard deviation of observable (fluctuations)
-        try:
-            # read parameters for files created by HAL's MD package 0.2.x
-            H5param = f['halmd' in f.keys() and 'halmd' or 'parameters'] # backwards compatibility
-            dimension = H5param['box'].attrs['dimension']
-            density = H5param['box'].attrs['density']
-            npart = sum(H5param['box'].attrs['particles']).astype(int)
-            force_param = H5param[ # for backwards compatibility
-                'potential' in H5param.attrs.keys() and H5param.attrs['potential']
-                or H5param.attrs['force']
-            ]
-            if 'cutoff' in force_param.attrs.keys():
-                cutoff = force_param.attrs['cutoff'][0]
-            else:
-                cutoff = float('Inf')
-        except KeyError:
-            # determine parameters for H5MD files
-            dimension = f['observables/box/offset'].shape[0]
-            volume = linalg.det(f['observables/box/edges'])
-            npart = 0
-            for k,v in f['trajectory'].iteritems(): # FIXME refer to /observables
-                if k != 'box':
-                    npart += v[next(v.iterkeys())]['value'].shape[1]
-            density = npart / volume
-            cutoff = float('NaN')
+
+        # determine system parameters for selected particle group
+        dimension = H5.attrs['dimension']
+        npart = H5['particle_number']
+        if type(npart) == h5py.Group:
+            raise SystemExit("a variable particle number is not supported")
+        npart = npart[()]
+
+        if not 'density' in H5.keys():
+            raise SystemExit("missing H5MD element {0:s}/density in file: {1:s}".format(H5.name, fn))
+        density = H5['density']
+        if type(density) == h5py.Group:
+            raise SystemExit("a variable particle density is not supported")
+        density = density[()]
+
+        cutoff = float('NaN')
 
         if args.table:
             print '# {0}, skip={1}'.format(path.basename(fn), args.skip)
@@ -112,7 +120,7 @@ def main(args):
             # iterate over datasets
             for dset in datasets:
                 # open dataset ...
-                values = H5[dset]['sample' in H5[dset].keys() and 'sample' or 'value'] # backwards compatibility
+                values = H5[dset]['value']
                 # ... and skip first number of entries
                 values = values[args.skip:]
 
