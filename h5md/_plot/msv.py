@@ -26,7 +26,7 @@ Plot macroscopic state variables
 def plot(args):
     import os, os.path
     from matplotlib import ticker
-    from scipy import *
+    from numpy import asarray, floor, intersect1d, linspace, mean, std, where
     from scipy.interpolate import interpolate
     import sys
     import h5py

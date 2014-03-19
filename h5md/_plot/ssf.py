@@ -39,7 +39,7 @@ def plot(args):
     import h5py
     from matplotlib import pyplot as plt
     import h5md._plot.label
-    from numpy import *
+    from numpy import abs, mean, log10, logspace, reshape, where
     #from matplotlib import ticker
     # import ssf
 
@@ -203,7 +203,7 @@ Load precomputed SSF data from HDF5 file
 """
 def load_ssf(H5data, args):
     import re
-    from numpy import *
+    from numpy import floor, mean, reshape, sqrt, sum, var
 
     idx = [int(x) for x in re.split(':', args.sample)]
     if len(idx) == 1:
@@ -234,7 +234,7 @@ Compute static structure factor from trajectory data
 def ssf_from_trajectory(H5data, param, args):
     from h5md._plot.ext import _static_structure_factor
     from time import time
-    from numpy import *
+    from numpy import arange, array, diff, dstack, float32, indices, pi, repeat, reshape, sqrt, squeeze, sum, where, zeros
     import re
 
     # read periodically extended particle positions,
@@ -286,6 +286,7 @@ def ssf_from_trajectory(H5data, param, args):
                 print '|q| = %.2f\t%4d vectors' % (q_val, len(q_))
     # adjust nq to actual number of wavenumbers
     nq = len(q_range)
+    q_range = array(q_range)
 
     # compute static structure factor over |q| range
     S_q = zeros(nq)

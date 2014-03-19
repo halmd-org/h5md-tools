@@ -27,7 +27,7 @@ def plot(args):
     import h5py
     from matplotlib import pyplot as plt
     import h5md._plot.label
-    from numpy import *
+    from numpy import linspace
 
     ax = plt.axes()
     label = None
@@ -154,7 +154,7 @@ Compute pair distribution function from trajectory data
 def pdf_from_trajectory(H5data, param, args):
     from scipy.constants import pi
     from scipy.special import gamma
-    from numpy import *
+    from numpy import array, float32, histogram, power, prod, round_, sqrt, sum, zeros
     import re
 
     # read periodically extended particle positions,
@@ -179,7 +179,7 @@ def pdf_from_trajectory(H5data, param, args):
     r_max = args.xlim or (0, min(length) / 2)
     H = zeros(args.bins)
     for r in samples:
-        for (i, j) in enumerate(range(N - 1, 0, -1)):
+        for (i, j) in enumerate(range(r.shape[0] - 1, 0, -1)):
             # particle distance vectors
             dr = r[:j] - r[i + 1:]
             # minimum image distances
