@@ -8,9 +8,10 @@
 #
 
 def main(args):
-    from numpy import concatenate, floor, mean, reshape, sqrt, std
+    from numpy import concatenate, floor, linalg, mean, reshape, sqrt, std
     from math import pi
     import h5py
+    from os import path
 
     # descriptions of derived quantities
     description = {
@@ -97,19 +98,27 @@ def main(args):
             if 'cutoff' in force_param.attrs.keys():
                 cutoff = force_param.attrs['cutoff'][0]
             else:
-                cutoff = 0
-
-            if args.table:
-                print '# {0}, skip={1}'.format(fn, args.skip)
-                print '  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart),
-            else:
-                print 'Filename: %s' % fn
-                if cutoff > 0:
-                    print 'Cutoff: %g' % cutoff
-                print 'Particles: %d' % npart
-                print 'Density: %.4g' % density
+                cutoff = float('Inf')
         except KeyError:
-            pass
+            # determine parameters for H5MD files
+            dimension = f['observables/box/offset'].shape[0]
+            volume = linalg.det(f['observables/box/edges'])
+            npart = 0
+            for k,v in f['trajectory'].iteritems(): # FIXME refer to /observables
+                if k != 'box':
+                    npart += v[next(v.iterkeys())]['value'].shape[1]
+            density = npart / volume
+            cutoff = float('NaN')
+
+        if args.table:
+            print '# {0}, skip={1}'.format(path.basename(fn), args.skip)
+            print '  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart),
+        else:
+            print 'Filename: %s' % path.basename(fn)
+            if cutoff > 0:
+                print 'Cutoff: %g' % cutoff
+            print 'Particles: %d' % npart
+            print 'Density: %.4g' % density
 
         try:
             # iterate over datasets
