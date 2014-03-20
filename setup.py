@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 from numpy.distutils.core import setup, Extension
-from subprocess import Popen, PIPE
+from subprocess import check_output
 
 def parse_git_version():
     version = 'unkown'
     try:
-        version = Popen(['git', 'describe', '--always'], stdout=PIPE).communicate()[0] or version
+        version = check_output(['git', 'describe', '--always']).strip() or version
     except OSError:
         pass
     return version
