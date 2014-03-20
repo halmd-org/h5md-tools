@@ -26,7 +26,7 @@ def plot(args):
     import os, os.path
     import h5py
     from matplotlib import pyplot as plt
-    import h5md._plot.label
+    import h5mdtools._plot.label
     from numpy import linspace
 
     ax = plt.axes()
@@ -46,7 +46,7 @@ def plot(args):
             # determine file type, prefer precomputed static structure factor data
             if 'structure' in f.keys() and 'ssf' in f['structure'].keys():
                 import filon
-                import h5md._plot.ssf as ssf
+                import h5mdtools._plot.ssf as ssf
                 from scipy.constants import pi
 
                 # load static structure factor from file
@@ -79,7 +79,7 @@ def plot(args):
                 raise SystemExit('Input file provides neither data for the static structure factor nor a trajectory')
 
             # before closing the file, store attributes for later use
-            attrs = h5md._plot.label.attributes(param)
+            attrs = h5mdtools._plot.label.attributes(param)
 
         except IndexError:
             raise SystemExit('invalid phase space sample offset')

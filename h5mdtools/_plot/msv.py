@@ -32,7 +32,7 @@ def plot(args):
     from scipy.interpolate import interpolate
     import sys
     import h5py
-    import h5md._plot.label
+    import h5mdtools._plot.label
 
     from matplotlib import pyplot as plot
 
@@ -133,7 +133,7 @@ def plot(args):
 
             if args.label:
                 if 'parameters' in f.keys:
-                    attrs = h5md._plot.label.attributes(f['parameters'])
+                    attrs = h5mdtools._plot.label.attributes(f['parameters'])
                 attrs['y_zero'] = r'%.2f' % y_zero
                 attrs['y_mean'] = r'%.3f' % y_mean
                 attrs['y_std'] = r'%#.2g' % y_std
@@ -142,7 +142,7 @@ def plot(args):
                 basen = os.path.splitext(os.path.basename(fn))[0]
                 label = basen.replace('_', r'\_')
             if args.title and 'parameters' in f.keys:
-                title = args.title % h5md._plot.label.attributes(f['parameters'])
+                title = args.title % h5mdtools._plot.label.attributes(f['parameters'])
 
         except KeyError as what:
             raise SystemExit(str(what) + '\nmissing simulation data in file: %s' % fn)

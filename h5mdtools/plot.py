@@ -99,5 +99,5 @@ def add_parser(subparsers):
     for plot in plots.itervalues():
         plot.add_parser(subparsers)
 
-plots = dict([(m, sys.modules['h5md._plot.%s' % m]) for m in _plot.__all__])
+plots = dict([(m, sys.modules['h5mdtools._plot.%s' % m]) for m in _plot.__all__])
 

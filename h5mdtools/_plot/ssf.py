@@ -38,7 +38,7 @@ def plot(args):
     import os, os.path
     import h5py
     from matplotlib import pyplot as plt
-    import h5md._plot.label
+    import h5mdtools._plot.label
     from numpy import abs, mean, log10, logspace, reshape, where
     #from matplotlib import ticker
     # import ssf
@@ -82,7 +82,7 @@ def plot(args):
 
             # before closing the file, store attributes for later use
             if param:
-                attrs = h5md._plot.label.attributes(param)
+                attrs = h5mdtools._plot.label.attributes(param)
             else:
                 attrs = {}
 
@@ -226,7 +226,7 @@ def load_ssf(H5data, args):
 Compute static structure factor from trajectory data
 """
 def ssf_from_trajectory(H5data, param, args):
-    from h5md._plot.ext import _static_structure_factor
+    from h5mdtools._plot.ext import _static_structure_factor
     from time import time
     from numpy import arange, array, diff, dstack, float32, indices, pi, repeat, reshape, sqrt, squeeze, sum, where, zeros
     import re
@@ -332,12 +332,12 @@ def make_cuda_kernels():
     from pycuda.compiler import SourceModule
     from pycuda.reduction import ReductionKernel
     from os.path import join
-    import h5md._plot
+    import h5mdtools._plot
 
     global ssf_module, tex_q, sum_kernel
 
     # read and compile file ssf_kernel.cu
-    ssf_kernel_source = file(join(h5md._plot.__path__[0], 'gpu/ssf_kernel.cu')).read()
+    ssf_kernel_source = file(join(h5mdtools._plot.__path__[0], 'gpu/ssf_kernel.cu')).read()
     ssf_module = SourceModule(ssf_kernel_source, no_extern_c=True)
 
 #    compute_ssf.prepare("PPP", block=(128, 1, 1))

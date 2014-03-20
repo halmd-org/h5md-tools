@@ -21,8 +21,8 @@
 #
 
 import argparse
-from h5md import *
-import h5md
+from h5mdtools import *
+import h5mdtools
 import sys
 
 def main():
@@ -36,10 +36,10 @@ def main():
     except SystemExit, status:
         exit('ERROR: %s' % status)
 
-tools = dict([(m, sys.modules['h5md.%s' % m]) for m in h5md.__all__])
+tools = dict([(m, sys.modules['h5mdtools.%s' % m]) for m in h5mdtools.__all__])
 
 def parse_args():
-    parser = argparse.ArgumentParser(prog='h5md')
+    parser = argparse.ArgumentParser(description="Toolset for the analysis and manipulation of H5MD files")
 
     subparsers = parser.add_subparsers(dest='command', help='available modules')
     for tool in tools.itervalues():

@@ -24,7 +24,7 @@ def plot(args):
     Plot time correlation functions
     """
     import h5py
-    import h5md._plot.label
+    import h5mdtools._plot.label
     import numpy as np
 
     from matplotlib import pyplot as plot
