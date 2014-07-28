@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright © 2011  Felix Höfling
+# Copyright © 2011-2014 Felix Höfling
 #
 # cat - concatenate trajectory samples from different H5MD files
 #
@@ -10,7 +10,7 @@
 #
 
 def main(args):
-    from numpy import array, concatenate, prod, where
+    from numpy import array, concatenate, diagonal, prod, where
     from os.path import basename
     import h5py
 
@@ -33,18 +33,18 @@ def main(args):
             try:
                 # on first input file
                 if i == 0:
-                    dimension = f['halmd/box'].attrs['dimension']
+                    dimension = len(f['observables/box/offset'])
                 else:
                     # check that dimension and box size are compatible
-                    if f['halmd/box'].attrs['dimension'] != dimension:
+                    if len(f['observables/box/offset']) != dimension:
                         raise SystemExit('Space dimension of input files must match')
 
-                    idx, = where(abs(f['halmd/box'].attrs['length'] / box_length[0] - 1) > 1e-6)
+                    idx, = where(abs(diagonal(f['observables/box/edges']) / box_length[0] - 1) > 1e-6)
                     if len(idx) > 0 and idx[0] != args.axis % dimension:
                         raise SystemExit('Box edges perpendicular to concatenation axis must match')
 
-                input += [(f, H5in['position/sample'], H5in['velocity/sample'])]
-                box_length += [f['halmd/box'].attrs['length']]
+                input += [(f, H5in['position/value'], H5in['velocity/value'])]
+                box_length += [diagonal(f['observables/box/edges'])]
 
             except KeyError:
                 f.close()
@@ -83,10 +83,10 @@ def main(args):
         (f,r,v) = input[0]
         H5in = f['trajectory/A']
         f.copy('h5md', of)
-        # copy group 'halmd'
-        f.copy('halmd', of)
+        # copy group 'parameters'
+        f.copy('parameters', of)
         # copy group 'box'
-        f.copy('trajectory/box', of['trajectory'])
+        f.copy('observables/box', of.require_group('observables'))
         # create group 'time' and append time stamp of last sample
         shape = H5in['position/time'].shape # workaround reverse slicing bug
         group = H5out.require_group('position')
@@ -96,7 +96,7 @@ def main(args):
         H5out.require_group('velocity')['step'] = ds
 
         # store input file names and spacing parameter
-        group = of.create_group('h5md_cat/input')
+        group = of.create_group('parameters/h5md_cat/input')
         group.attrs.create('files', array([basename(f.filename) for (f,r,v) in input]), dtype=h5py.new_vlen(str))
         group.attrs.create('spacing', args.spacing)
 
@@ -116,24 +116,19 @@ def main(args):
         position = concatenate(position)
 
         H5out.require_group('position').create_dataset(
-            'sample', data=(position,),
+            'value', data=(position,),
             maxshape=(None,) + position.shape, dtype=input[0][1].dtype,
         )
 
         # concatenate velocities
         velocity = concatenate([v[args.sample] for (f,r,v) in input])
         H5out.require_group('velocity').create_dataset(
-            'sample', data=(velocity,),
+            'value', data=(velocity,),
             maxshape=(None,) + velocity.shape, dtype=input[0][1].dtype,
         )
-
-        # update box length, particle number, and average density
-        of['halmd/box'].attrs.modify('length', box_length_out)
-        of['halmd/box'].attrs.modify('particles', array([position.shape[0],]))
-        of['halmd/box'].attrs.modify('density', position.shape[0] / prod(box_length_out)) 
-
-        of['trajectory/box/edges'][args.axis, args.axis] = box_length_out[args.axis]
-        of['trajectory/box/offset'][args.axis] = box_offset
+        # update box length
+        of['observables/box/edges'][args.axis, args.axis] = box_length_out[args.axis]
+        of['observables/box/offset'][args.axis] = box_offset
 
         of.close()
 
