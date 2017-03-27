@@ -10,7 +10,7 @@
 def main(args):
     from _common import dset_abbrev
 
-    from numpy import concatenate, floor, linalg, mean, reshape, sqrt, std
+    from numpy import array, concatenate, floor, linalg, mean, reshape, sqrt, std
     from math import pi
     import h5py
     from os import path
@@ -136,6 +136,7 @@ def main(args):
                 else:
                     shape[0] = 1
                     shape.insert(1, -1)
+                shape = array(shape)                        # convert from list to numpy.array
                 values = reshape(values, shape)
 
                 # compute mean and standard deviation as well as error estimates
