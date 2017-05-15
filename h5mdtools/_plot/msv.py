@@ -28,7 +28,7 @@ def plot(args):
     """
     import os, os.path
     from matplotlib import ticker
-    from numpy import asarray, floor, in1d, intersect1d, linspace, mean, std, where
+    from numpy import asarray, floor, in1d, intersect1d, linspace, mean, reshape, std, where
     from scipy.interpolate import interpolate
     import sys
     import h5py
