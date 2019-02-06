@@ -3,7 +3,7 @@
 #
 # Copyright © 2011  Felix Höfling
 #
-# cat - concatenate trajectory samples from different H5MD files
+# cat - concatenate phase space samples from different H5MD files
 #
 # The param group is copied from the first file, only /param/box is adjusted accordingly.
 # Currently, only a single particle species is supported.
@@ -34,16 +34,15 @@ def main(args):
             try:
                 # on first input file
                 if i == 0:
-                    dimension = len(f['particles/all/box/edges'][:])    
+		    dimension = f['particles/all/box'].attrs['dimension']   
                     
                 else:
                     # check that dimension and box size are compatible
-                    if len(f['particles/all/box/edges'][:]) != dimension:
+	 	    if f['particles/all/box'].attrs['dimension']!= dimension:
                         raise SystemExit('Space dimension of input files must match')
 
                     idx=[]
                     for j in range(dimension):
-                        
                         if j == args.axis % dimension and dimension in (2,3):
                             if sum(abs(cross(f['particles/all/box/edges'][:,j],box_vector[0][:,j])))>1e-6:
                                 raise SystemExit('Box edges parallel to concatenation axis must point in the same direction')
@@ -71,7 +70,7 @@ def main(args):
             for i, (f,r,v,m,s) in enumerate(input):
                 print 'input file #{0:d}: {1:s}'.format(i+1, f.filename)
                 
-            #print 'Use phase space sample {0}'.format(args.step)
+            #print 'Use phase space sample {0}'.format(args.sample)
             axis_name = { 0: '1st', 1: '2nd', 2: '3rd', 3: '4th', -1: 'last' }
             print 'Concatenate along {0} axis'.format(axis_name[args.axis])
             print 'Introduce spacing of {0} by compression'.format(args.spacing)
@@ -104,8 +103,8 @@ def main(args):
         
         ds = group.create_dataset('time', data=(H5in['position/time'][shape[0]-1],), maxshape=(None,))
         H5out.require_group('velocity')['time'] = ds # make hard link
-        H5out.require_group('mass')['time'] = ds # make hard link
-        H5out.require_group('species')['time'] = ds # make hard link
+        H5out.require_group('mass')['time'] = ds 
+        H5out.require_group('species')['time'] = ds 
         
         ds = group.create_dataset('step', data=(H5in['position/step'][shape[0]-1],), maxshape=(None,))
         H5out.require_group('velocity')['step'] = ds
@@ -126,7 +125,7 @@ def main(args):
         position = ()
         for i,(f,r,v,m,s) in enumerate(input):
             L = box_length[i]
-            r_ = r[args.step] % L - .5 * L # map positions back to simulation box
+            r_ = r[args.sample] % L - .5 * L # map positions back to simulation box
             r_[..., args.axis] *= 1 - args.spacing / L[args.axis] # compress to allow for spacing
             r_[..., args.axis] += shift
             position += (r_,)
@@ -139,32 +138,31 @@ def main(args):
         )
 
         # concatenate velocities
-        velocity = concatenate([v[args.step] for (f,r,v,m,s) in input])
+        velocity = concatenate([v[args.sample] for (f,r,v,m,s) in input])
         H5out.require_group('velocity').create_dataset(
             'value', data=(velocity,),
-            maxshape=(None,) + velocity.shape, dtype=input[0][1].dtype,
+            maxshape=(None,) + velocity.shape, dtype=input[0][2].dtype,
         )
 
         # concatenate masses
-        mass = concatenate([m[args.step] for (f,r,v,m,s) in input])
+        mass = concatenate([m[args.sample] for (f,r,v,m,s) in input])
         H5out.require_group('mass').create_dataset(
             'value', data=(mass,),
-            maxshape=(None,) + mass.shape, dtype=input[0][1].dtype,
+            maxshape=(None,) + mass.shape, dtype=input[0][3].dtype,
         )
         
         # concatenate species
-        species = concatenate([s[args.step] for (f,r,v,m,s) in input])
+        species = concatenate([s[args.sample] for (f,r,v,m,s) in input])
         H5out.require_group('species').create_dataset(
             'value', data=(species,),
-            maxshape=(None,) + species.shape, dtype=input[0][1].dtype,
+            maxshape=(None,) + species.shape, dtype=input[0][4].dtype,
         )
         
         
         # update box length, particle number, and average density
-        of.create_group('halmd/box')
-        of['halmd/box'].attrs.modify('length', box_length_out)
-        of['halmd/box'].attrs.modify('particles', array([position.shape[0],]))
-        of['halmd/box'].attrs.modify('density', position.shape[0] / prod(box_length_out)) 
+        of['particles/all/box'].attrs.modify('length', box_length_out)
+        of['particles/all/box'].attrs.modify('particles', array([position.shape[0],]))
+        of['particles/all/box'].attrs.modify('density', position.shape[0] / prod(box_length_out)) 
 
         of['particles/all/box/edges'][args.axis, args.axis] = box_length_out[args.axis]
         ds = group.create_dataset('offset', data=(box_offset,), maxshape=(None,))
@@ -180,11 +178,11 @@ def main(args):
 
 def add_parser(subparsers):
     parser = subparsers.add_parser('cat', help='concatenate H5MD phase space samples')
-    parser.add_argument('input', metavar='INPUT', nargs='+', help='H5MD files with trajectory data')
+    parser.add_argument('input', metavar='INPUT', nargs='+', help='H5MD files with particles/all data')
     parser.add_argument('-o', '--output', required=True, help='output filename')
     parser.add_argument('-n', '--dry-run', action='store_true', help='perform a quick trial run without generating the output file')
     parser.add_argument('-v', '--verbose', action='store_true', help='print detailed information')
     parser.add_argument('--axis', default=-1, type=int, help='concatenation axis')
-    parser.add_argument('--step', default=-1, type=int, help='index of phase space sample')
+    parser.add_argument('--sample', default=-1, type=int, help='index of phase space sample')
     parser.add_argument('--spacing', default=0, type=float, help='spacing between concatenated samples')
 
