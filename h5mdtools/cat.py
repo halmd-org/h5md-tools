@@ -34,11 +34,11 @@ def main(args):
             try:
                 # on first input file
                 if i == 0:
-		    dimension = f['particles/all/box'].attrs['dimension']   
+                    dimension = f['particles/all/box'].attrs['dimension']   
                     
                 else:
                     # check that dimension and box size are compatible
-	 	    if f['particles/all/box'].attrs['dimension']!= dimension:
+                    if f['particles/all/box'].attrs['dimension']!= dimension:
                         raise SystemExit('Space dimension of input files must match')
 
                     idx=[]
@@ -55,7 +55,7 @@ def main(args):
                 input += [(f, H5in['position/value'], H5in['velocity/value'], H5in['mass/value'], H5in['species/value'])]
                   
                 box_vector += [f['particles/all/box/edges'][:]]
-                box_length += [2*sqrt(sum(f['particles/all/box/edges'][:]**2,axis=0))] 
+                box_length += [sqrt(sum(f['particles/all/box/edges'][:]**2,axis=0))] 
             
             except KeyError:
                 f.close()
@@ -64,7 +64,6 @@ def main(args):
         # determine size of resulting box
         box_length_out = box_length[0].copy() # deep copy, don't store just a reference!
         box_length_out[args.axis] = sum(array(box_length)[:, args.axis])
-        
         # output particle numbers and box extents
         if args.verbose:
             for i, (f,r,v,m,s) in enumerate(input):
@@ -119,13 +118,13 @@ def main(args):
 
         # concatenate positions:
         # string subsystems together along specified axis by appropriate shifts
-        shift = -.5 * sum(array(box_length)[1:, args.axis])
-        box_offset = shift - .5 * box_length[0][args.axis]
+        shift = -.5 * sum(array(box_length)[:, args.axis])
+        box_offset = shift + .5 * box_length[0][args.axis]
 
         position = ()
         for i,(f,r,v,m,s) in enumerate(input):
             L = box_length[i]
-            r_ = r[args.sample] % L - .5 * L # map positions back to simulation box
+            r_ = (r[args.sample]+.5*L) % L # map positions back to a positive simulation box
             r_[..., args.axis] *= 1 - args.spacing / L[args.axis] # compress to allow for spacing
             r_[..., args.axis] += shift
             position += (r_,)
@@ -185,4 +184,3 @@ def add_parser(subparsers):
     parser.add_argument('--axis', default=-1, type=int, help='concatenation axis')
     parser.add_argument('--sample', default=-1, type=int, help='index of phase space sample')
     parser.add_argument('--spacing', default=0, type=float, help='spacing between concatenated samples')
-
