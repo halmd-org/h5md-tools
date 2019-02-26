@@ -41,13 +41,14 @@ def plot(args):
             raise SystemExit('failed to open HDF5 file: %s' % fn)
 
         try:
-            param = f['parameters']
 
             # determine file type, prefer precomputed static structure factor data
             if 'structure' in f.keys() and 'ssf' in f['structure'].keys():
                 import filon
                 import h5mdtools._plot.ssf as ssf
                 from scipy.constants import pi
+
+                param = f['parameters']
 
                 # load static structure factor from file
                 H5 = f['structure/ssf/' + '/'.join(args.flavour)]
@@ -74,12 +75,13 @@ def plot(args):
             elif 'particles' in f.keys():
                 # compute SSF from trajectory data
                 H5 = f['particles/' + args.flavour[0]]
-                r, pdf, pdf_err = pdf_from_trajectory(H5['position'], param, args)
+                r, pdf, pdf_err = pdf_from_trajectory(H5, args)
             else:
                 raise SystemExit('Input file provides neither data for the static structure factor nor a trajectory')
 
             # before closing the file, store attributes for later use
-            attrs = h5mdtools._plot.label.attributes(param)
+            if 'param' in locals():
+                attrs = h5mdtools._plot.label.attributes(param)
 
         except IndexError:
             raise SystemExit('invalid phase space sample offset')
@@ -151,16 +153,16 @@ def plot(args):
 """
 Compute pair distribution function from trajectory data
 """
-def pdf_from_trajectory(H5data, param, args):
+def pdf_from_trajectory(H5group, args):
     from scipy.constants import pi
     from scipy.special import gamma
-    from numpy import array, float32, histogram, power, prod, round_, sqrt, sum, zeros
+    from numpy import array, diagonal, float32, histogram, power, prod, round_, sqrt, sum, zeros
     import re
 
     # read periodically extended particle positions,
     # read one or several samples, convert to single precision
     idx = [int(x) for x in re.split(':', args.sample)]
-    data = H5data['value']
+    data = H5group['position/value']
     if len(idx) == 1:
         samples = array([data[idx[0]],], dtype=float32)
     elif len(idx) == 2:
@@ -169,11 +171,11 @@ def pdf_from_trajectory(H5data, param, args):
         samples = array(data[idx[0]:idx[1]:idx[2]], dtype=float32)
 
     # positional coordinates dimension
-    dim = param['box'].attrs['dimension']
+    dim = H5group['box'].attrs['dimension']
     # periodic simulation box length
-    length = param['box'].attrs['length']
+    length = diagonal(H5group['box/edges'])
     # number of particles
-    N = int(sum(param['box'].attrs['particles']))
+    N = data.shape[1]
     density = N / prod(length)
 
     r_max = args.xlim or (0, min(length) / 2)
