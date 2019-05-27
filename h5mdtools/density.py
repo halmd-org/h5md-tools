@@ -118,24 +118,25 @@ def main(args):
         box_edges=get_box_edges(f)
         sigma= get_sigma(wavevector)
         
-	try:
-	    test=f['structure/all/density_profile'].keys()
-	    if 'all_samples' in test:
-	        print('all_samples already exists')
-		# raw_input returns the empty string for "enter"
-		yes = {'yes','y', ''}
-		no = {'no','n'}
-		print("Compute again and overwrite? [y,n] (default yes)")		    
-		choice = raw_input().lower()
-		if choice not in yes and choice not in no :
-		    print('invalid response')
-		    f.close()
-		    return
-		elif choice in no:
-		    f.close()
-		    return
-	except KeyError:
-	    pass
+	if not args.dry_run and args.all_samples:
+	    try:
+		test=f['structure/all/density_profile'].keys()
+		if 'all_samples' in test:
+		    print('all_samples already exists')
+		    # raw_input returns the empty string for "enter"
+		    yes = {'yes','y', ''}
+		    no = {'no','n'}
+		    print("Compute again and overwrite? [y,n] (default yes)")		    
+		    choice = raw_input().lower()
+		    if choice not in yes and choice not in no :
+			print('invalid response')
+			f.close()
+			return
+		    elif choice in no:
+			f.close()
+			return
+	    except KeyError:
+		pass
 
         f.close()
         
@@ -153,12 +154,13 @@ def main(args):
             mesh,density=density_from_densitymodes(wavevector,value,time_of_interest,
                                                 box_edges=box_edges,gauss_convolution=gaus,sigma=sigma)
 
-        if args.verbose:
+        if args.verbose and not args.dry_run:
             print 'density profile data is written to'
             if args.all_samples:    
                 print 'structure/all/density_profile/all_samples'
             else:
                 print 'structure/all/density_profile/single_sample'
+		print 'in single sample only one density profile is saved and overwritten by each call'
             
         #Writing
         
