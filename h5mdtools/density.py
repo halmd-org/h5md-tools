@@ -234,9 +234,11 @@ def main(args):
                 sample=args.sample.split(":")
                 slicelist=[]
                 allsamplelist=np.arange(len(step))
+                
                 if len(sample)==1:
-                    slicelist.append(int(sample[0]))
-                    slicelist.append(None)
+                    sliceind=int(sample[0])%len(step)
+                    slicelist.append(sliceind)
+                    slicelist.append(sliceind+1)
                     slicelist.append(None)
 
                 elif len(sample)==2:
@@ -252,9 +254,9 @@ def main(args):
                 else:
                     print "invalid input, sample must be one or up to three integers separated by ':'  , like numpy indexing"
                     return
-                
-                samplelist=allsamplelist[slice(*slicelist)]
 
+                samplelist=allsamplelist[slice(*slicelist)]
+                print samplelist
                 #Check profile or map and average or timeseries
                 if args.map:
                     if args.average:
@@ -377,9 +379,9 @@ def main(args):
             if args.map:
                 if not args.average:
                     if len(box_edges)==3:
-                        plot_3d(mesh,density[samplelist[-1]])
+                        plot_3d(mesh,density[-1])
                     if len(box_edges)==2:
-                        plot_2d(mesh,density[samplelist[-1]],coord)
+                        plot_2d(mesh,density[-1],coord)
                 else:
                     if len(box_edges)==3:
                         plot_3d(mesh,density)
@@ -389,7 +391,7 @@ def main(args):
                 if not args.average:
                     densityplot=[]
                     for i in range(number_of_dim):
-                        densityplot.append(density[i][samplelist[-1]])
+                        densityplot.append(density[i][-1])
                     profile_plot(mesh,densityplot,coord)
                 else:
                     profile_plot(mesh,density,coord) 
@@ -438,7 +440,7 @@ def add_parser(subparsers):
     parser.add_argument('--axis', nargs='?',type=int,
                         help='axis for density profile, integer like {0 , 1 , 2 , -1}')
     parser.add_argument('--sample', default='-1', type=str,
-                        help="indexing of samples via 1 to 3 integers, separated by ':' , for example all=>'0:-1'")
+                        help="indexing of samples via 1 to 3 integers, separated by ':' , for example '0:-1:2'")
     parser.add_argument('--average', action='store_true',default=False,
                         help='time average of the density over all selected samples with --sample , or all samples if --sample is not given')
     parser.add_argument('--group', type=str, help='particle group [Default: use first group]')
@@ -461,7 +463,7 @@ def parse_args():
     parser.add_argument('--axis', nargs='?',type=int,
                         help='axis for density profile, integer like {0 , 1 , 2 , -1}')
     parser.add_argument('--sample', default='-1', type=str,
-                        help="indexing of samples via 1 to 3 integers, separated by ':' , for example all=>'0:-1'")
+                        help="indexing of samples via 1 to 3 integers, separated by ':' , for example '0:-1:2'")
     parser.add_argument('--average', action='store_true',default=False,
                         help='time average of the density over all selected samples with --sample , or all samples if --sample is not given')
     parser.add_argument('--group', type=str, help='particle group [Default: use first group]')
