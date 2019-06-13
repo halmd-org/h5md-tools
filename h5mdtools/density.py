@@ -91,7 +91,7 @@ def compute_density_map(wavevector,value,sample_of_interest,box_edges,width):
         else:
             addlength.append(0)
         dlength.append(np.max(w[i])-np.min(w[i])+int(addlength[i]))
-        mesh.append(np.linspace(np.min(w[i]),np.max(w[i]),dlength[i])/(dlength[i]-1.)*box_edges[i])
+        mesh.append(box_edges[i]*np.linspace(np.min(w[i]),np.max(w[i]),dlength[i])/np.double(dlength[i]))
 
     dens_modes=np.zeros(dlength[::-1],dtype=complex)
     dens_modes[tuple(w)[::-1]]=value[sample_of_interest]*gaussian
@@ -118,7 +118,7 @@ def compute_density_profile(wavevector,value,sample_of_interest,box_edges,width)
         else:
             addlength=0
         dlength=np.max(w)-np.min(w)+int(addlength)
-        mesh.append(np.linspace(np.min(w),np.max(w),dlength)/(dlength-1.)*box_edges[i])
+        mesh.append(box_edges[i]*np.linspace(np.min(w),np.max(w),dlength)/np.double(dlength))
         dens_modes=np.zeros(dlength,dtype=complex)            
         dens_modes[w]=value[sample_of_interest][idx]*gaussian[idx]
         densit=np.real(np.fft.fftshift(np.fft.ifftn(dens_modes)))
@@ -211,7 +211,7 @@ def check_overwrite(group_name,of,group,full_dim,verbose):
 
 def main(args):
 
-    #Reading
+    #Reading from File
 
     for i, fn in enumerate(args.input):
         try:
@@ -224,54 +224,58 @@ def main(args):
                 step, time, value, wavevector = read_density_mode_data(h5md,group)
                 #Dimensions of the box
                 box_edges=get_box_edges(h5md,group)
-                #Gaussian smoothing    
-                if args.width is None:
-		    width_smooth = get_width(wavevector)
-                else:
-                    width_smooth = args.width
-
-                #Check single or multiple samples
-                sample=args.sample.split(":")
-                slicelist=[]
-                allsamplelist=np.arange(len(step))
-                
-                if len(sample)==1:
-                    sliceind=int(sample[0])%len(step)
-                    slicelist.append(sliceind)
-                    slicelist.append(sliceind+1)
-                    slicelist.append(None)
-
-                elif len(sample)==2:
-                    slicelist.append(int(sample[0]))
-                    slicelist.append(int(sample[1]))
-                    slicelist.append(None)
- 
-                elif len(sample)==3:
-                    slicelist.append(int(sample[0]))
-                    slicelist.append(int(sample[1]))
-                    slicelist.append(int(sample[2]))
-
-                else:
-                    print "invalid input, sample must be one or up to three integers separated by ':'  , like numpy indexing"
-                    return
-
-                samplelist=allsamplelist[slice(*slicelist)]
-                print samplelist
-                #Check profile or map and average or timeseries
-                if args.map:
-                    if args.average:
-                        newgroup_name='mean_density_map'
-                    else:
-                        newgroup_name='density_map'
-                else:
-                    if args.average:
-                        newgroup_name='mean_density_profile_'
-                    else:
-                        newgroup_name='density_profile_'
 
         except IOError:
             print 'Failed to open H5MD file: {0}. Skipped'.format(fn)
             continue
+
+        #Reading from User Input 
+
+        #Gaussian smoothing    
+        if args.width is None:
+	    width_smooth = get_width(wavevector)
+        else:
+            width_smooth = args.width
+
+        #Check sample indices
+        sample=args.sample.split(":")
+        slicelist=[]
+        allsamplelist=np.arange(len(step))
+        
+        if len(sample)==1:
+            sliceind=int(sample[0])%len(step)
+            slicelist.append(sliceind)
+            slicelist.append(sliceind+1)
+            slicelist.append(None)
+
+        elif len(sample)==2:
+            slicelist.append(int(sample[0]))
+            slicelist.append(int(sample[1]))
+            slicelist.append(None)
+
+        elif len(sample)==3:
+            slicelist.append(int(sample[0]))
+            slicelist.append(int(sample[1]))
+            slicelist.append(int(sample[2]))
+
+        else:
+            print "invalid input, sample must be one or up to three integers separated by ':'  , like numpy indexing"
+            return
+
+        samplelist=allsamplelist[slice(*slicelist)]
+
+        #Check profile or map and average or timeseries
+        if args.map:
+            if args.average:
+                newgroup_name='mean_density_map'
+            else:
+                newgroup_name='density_map'
+        else:
+            if args.average:
+                newgroup_name='mean_density_profile_'
+            else:
+                newgroup_name='density_profile_'
+
 
         #Computing
 
@@ -397,8 +401,8 @@ def main(args):
                     profile_plot(mesh,density,coord) 
 
         #Scatter-Plot-test
-        if args.scatter and len(args.input)<2 and args.plot==False:
-            if args.sample==-1:
+        if args.scatter and len(args.input)<2:
+            if -1 or len(step) in samplelist:
                 sc=1
 	    else: #args.sample==0:
                 sc=0
@@ -447,7 +451,7 @@ def add_parser(subparsers):
     parser.add_argument('--width', type=float, help='width of gaussian filter (0: disabled)[Default: 2*pi/(k_max/3)]')
     parser.add_argument('--plot', default=False, action='store_true', help='number density plot of last given sample (or average)')
     parser.add_argument('--scatter', default=False,action='store_true',
-                        help='additional scatter plot for testing / disables plot') #requires particle/all/positon data
+                        help='additional scatter plot for testing (requires particle/<group_name>/positon data)')
 
 def parse_args():
     import argparse
@@ -470,7 +474,7 @@ def parse_args():
     parser.add_argument('--width', type=float, help='width of gaussian filter (0: disabled)[Default: 2*pi/(k_max/3)]')
     parser.add_argument('--plot', default=False, action='store_true', help='number density plot of last given sample (or average)')
     parser.add_argument('--scatter', default=False, action='store_true',
-                        help='additional scatter plot for testing / disables plot') #requires particle/all/positon data
+                        help='additional scatter plot for testing (requires particle/<group_name>/positon data)')
 
     return parser.parse_args()
 
