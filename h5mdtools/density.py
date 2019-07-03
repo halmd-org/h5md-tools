@@ -27,6 +27,8 @@ from numpy.linalg import norm
 import matplotlib.pyplot as plt
 from os.path import basename
 import sys
+import re
+import warnings
 
 #Functions
 
@@ -55,9 +57,9 @@ def read_density_mode_data(h5md, group):
 def get_box_edges(f,group):
     return np.diagonal(f['particles/'+group+'/box/edges'][:]) 
 
-def get_width(wavevector):
-    k_max = np.max(np.sqrt(np.sum( wavevector**2 , axis=1)))/3.
-    return 2 * np.pi / k_max
+def check_width(wavevector):
+    k_max = np.max(np.sqrt(np.sum( wavevector**2 , axis=1)))
+    return np.pi / k_max
 
 def reduce_data(wavevector,box_edges):
     '''Function only has an effect, if halmd.observables.utility.wavevector is called with filter {...}'''
@@ -80,17 +82,13 @@ def compute_density_map(wavevector,value,sample_of_interest,box_edges,width):
     mesh=[]
     volume=np.prod(box_edges)
     wavevector,box_edges,coord=reduce_data(wavevector,box_edges)
-
     # Gaussian filter, width = 0 disables the filter (gaussian = 1)
     gaussian = np.exp( - 0.5 * width**2 * norm(wavevector,axis=1)**2 )
 
     for i in range(len(box_edges)):
-        w.append(np.array(wavevector[:,i]*box_edges[i]/(2*np.pi),dtype=int))
-        if 0 in w[i]:
-            addlength.append(1)
-        else:
-            addlength.append(0)
-        dlength.append(np.max(w[i])-np.min(w[i])+int(addlength[i]))
+        w.append(np.array(np.round(wavevector[:,i]*box_edges[i]/(2*np.pi)),dtype=int))
+        assert np.min(w[i])==-np.max(w[i]) , "Density-modes need to be on a symmetric grid around 0, i.e. k_max = -k_min"
+        dlength.append(2*np.max(w[i])+1)
         mesh.append(box_edges[i]*np.linspace(np.min(w[i]),np.max(w[i]),dlength[i])/np.double(dlength[i]))
 
     dens_modes=np.zeros(dlength[::-1],dtype=complex)
@@ -104,20 +102,16 @@ def compute_density_profile(wavevector,value,sample_of_interest,box_edges,width)
     mesh=[]
     density=[]
     volume=np.prod(box_edges)
-    wavevector,box_edges,coord=reduce_data(wavevector,box_edges)
+    notused,notused2,coord=reduce_data(wavevector,box_edges)
     # Gaussian filter, width = 0 disables the filter (gaussian = 1)
     gaussian = np.exp( - 0.5 * width**2 * norm(wavevector,axis=1)**2 )
 
     su=np.sum(wavevector**2,axis=1)
-
     for i in coord:
         idx = np.where(su == wavevector[:,i]**2)
-        w=np.array(wavevector[idx,i]*box_edges[i]/(2*np.pi),dtype=int)
-        if 0 in w:
-            addlength=1
-        else:
-            addlength=0
-        dlength=np.max(w)-np.min(w)+int(addlength)
+        w=np.array(np.round(wavevector[idx,i]*box_edges[i]/(2*np.pi)),dtype=int)
+        assert np.min(w)==-np.max(w) , "Density-modes need to be on a symmetric grid around 0, i.e. k_max = -k_min"
+        dlength=2*np.max(w)+1
         mesh.append(box_edges[i]*np.linspace(np.min(w),np.max(w),dlength)/np.double(dlength))
         dens_modes=np.zeros(dlength,dtype=complex)            
         dens_modes[w]=value[sample_of_interest][idx]*gaussian[idx]
@@ -174,7 +168,11 @@ def profile_plot(mesh,density,coord):
     fig, ax = plt.subplots(ncols=len(coord),figsize=(12,4.5)) 
     plt.suptitle('mean number density profiles',y=.99)
     if len(coord)==1:
-        plt.plot(mesh[coord[0]],density[coord[0]])
+        if isinstance(density, (list,)):
+            plt.plot(mesh[0],density[0])
+        else:
+            plt.plot(mesh[0],density)
+
         plt.xlabel(coordinates[coord[0]]+r' [$\sigma$]')
         plt.ylabel(r'number density')
     else:
@@ -231,38 +229,17 @@ def main(args):
 
         #Reading from User Input 
 
-        #Gaussian smoothing    
-        if args.width is None:
-	    width_smooth = get_width(wavevector)
-        else:
-            width_smooth = args.width
+        #Gaussian smoothing  
+        kmax = np.max(np.linalg.norm(wavevector, axis=-1))
+        width = args.width if args.width is not None else np.pi / kmax
+        if np.exp(-0.5*width**2*kmax**2)>0.05:
+            warnings.warn("Warning the Gaussian filter at k_max is still bigger than 5 percent")
 
-        #Check sample indices
-        sample=args.sample.split(":")
-        slicelist=[]
-        allsamplelist=np.arange(len(step))
-        
-        if len(sample)==1:
-            sliceind=int(sample[0])%len(step)
-            slicelist.append(sliceind)
-            slicelist.append(sliceind+1)
-            slicelist.append(None)
-
-        elif len(sample)==2:
-            slicelist.append(int(sample[0]))
-            slicelist.append(int(sample[1]))
-            slicelist.append(None)
-
-        elif len(sample)==3:
-            slicelist.append(int(sample[0]))
-            slicelist.append(int(sample[1]))
-            slicelist.append(int(sample[2]))
-
-        else:
-            print "invalid input, sample must be one or up to three integers separated by ':'  , like numpy indexing"
-            return
-
-        samplelist=allsamplelist[slice(*slicelist)]
+        # create (extended) slicing index from string,
+        # select a single sample if a single integer is given
+        idx = [int(x) for x in re.split(':', args.sample)]
+        idx = slice(*idx) if len(idx) > 1 else [idx[0]]
+        samplelist=np.arange(len(step))[idx]
 
         #Check profile or map and average or timeseries
         if args.map:
@@ -283,7 +260,7 @@ def main(args):
             density=[]
             for i in samplelist:
                 mesh,densities,coord=compute_density_map(wavevector,value,i,
-                                           box_edges=box_edges,width=width_smooth)
+                                           box_edges=box_edges,width=width)
                 density.append(densities)
             density=np.array(density)
             if args.average:
@@ -293,7 +270,7 @@ def main(args):
             densitylist=[]
             for i in samplelist:
                 mesh,densities,coord=compute_density_profile(wavevector,value,i,
-                                            box_edges=box_edges,width=width_smooth)
+                                            box_edges=box_edges,width=width)
                 densitylist.append(densities)
             number_of_dim=len(coord)
             density=[]
@@ -319,7 +296,15 @@ def main(args):
         #Verbose User Information        
 
         if args.verbose:
+            print "Edge lengths of simulation box:", box_edges
+            print "Obtained density modes for {0} wavevectors, k_max = {1:.3g}".format(wavevector.shape[0], kmax)
+            print "Resulting in a spatial resolution with a smallest distance of {0:.3g}".format(np.pi/kmax)
+            print "Width of reciprocal Gaussian filter: {0:.3g}".format(width)
+            print "Corresponding to a standard deviation of the Gaussian in real space of {0:.3g}".format(2*np.pi*width)
+            if not args.map:
+                print "Computing density profile along {0}-axis".format(coordinates[coord[0]])
             if not args.dry_run:
+                print ""
                 print 'density profile data will be written to'
                 if args.map:
                     print 'structure/'+group+'/'+newgroup_name
@@ -327,9 +312,9 @@ def main(args):
                 else:
                     for i in coord:
                         print 'structure/'+group+'/'+newgroup_name+coordinates[i]
-                    print ""   
-            if args.average:
-                print "the data sets 'step' and 'time' contain the information over which steps and times the average is applied"   
+                    #print ""   
+                if args.average:
+                    print "the data sets 'step' and 'time' contain the information over which steps and times the average is applied"   
                 print ""
 
             if len(box_edges)!=len(coord):
@@ -356,22 +341,22 @@ def main(args):
                             del of['structure/'+group+'/'+newgroup_name]
                             group_write=H5out.create_group(newgroup_name)
                         else:
-                            return
+                            break
                     ds1 = group_write.create_dataset('step', data=np.array(step[samplelist]))
                     ds2 = group_write.create_dataset('time', data=np.array(time[samplelist]))
                     ds3 = group_write.create_dataset('value', data=density)
                     ds4 = group_write.create_dataset('position_grid', data=np.array(np.meshgrid(*mesh)))
 
                 else:
-                    for i in coord:
+                    for i in range(len(coord)):
                         try:
-                            group_write = H5out.create_group(newgroup_name+coordinates[i])
+                            group_write = H5out.create_group(newgroup_name+coordinates[coord[i]])
                         except ValueError:
-                            if check_overwrite(newgroup_name+coordinates[i],of,group,args.map,args.verbose):
-                                del of['structure/'+group+'/'+newgroup_name+coordinates[i]]
-                                group_write=H5out.create_group(newgroup_name+coordinates[i])
+                            if check_overwrite(newgroup_name+coordinates[coord[i]],of,group,args.map,args.verbose):
+                                del of['structure/'+group+'/'+newgroup_name+coordinates[coord[i]]]
+                                group_write=H5out.create_group(newgroup_name+coordinates[coord[i]])
                             else:
-                                return
+                                break
                         group_write.create_dataset('step', data=np.array(step[samplelist]))
                         group_write.create_dataset('time', data=np.array(time[samplelist]))
                         group_write.create_dataset('value', data=np.array(density[i]))
@@ -382,15 +367,19 @@ def main(args):
         if args.plot and len(args.input)<2: 
             if args.map:
                 if not args.average:
-                    if len(box_edges)==3:
+                    if len(coord)==3:
                         plot_3d(mesh,density[-1])
-                    if len(box_edges)==2:
+                    elif len(coord)==2:
                         plot_2d(mesh,density[-1],coord)
+                    else: 
+                        profile_plot(mesh,density[-1],coord)
                 else:
-                    if len(box_edges)==3:
+                    if len(coord)==3:
                         plot_3d(mesh,density)
-                    if len(box_edges)==2:
+                    elif len(coord)==2:
                         plot_2d(mesh,density,coord)
+                    else:
+                        profile_plot(mesh,density,coord)
             else:
                 if not args.average:
                     densityplot=[]
@@ -444,7 +433,7 @@ def add_parser(subparsers):
     parser.add_argument('--axis', nargs='?',type=int,
                         help='axis for density profile, integer like {0 , 1 , 2 , -1}')
     parser.add_argument('--sample', default='-1', type=str,
-                        help="indexing of samples via 1 to 3 integers, separated by ':' , for example '0:-1:2'")
+                        help='(slicing) index of density mode sample(s) [integers seperated by :]')
     parser.add_argument('--average', action='store_true',default=False,
                         help='time average of the density over all selected samples with --sample , or all samples if --sample is not given')
     parser.add_argument('--group', type=str, help='particle group [Default: use first group]')
@@ -467,7 +456,7 @@ def parse_args():
     parser.add_argument('--axis', nargs='?',type=int,
                         help='axis for density profile, integer like {0 , 1 , 2 , -1}')
     parser.add_argument('--sample', default='-1', type=str,
-                        help="indexing of samples via 1 to 3 integers, separated by ':' , for example '0:-1:2'")
+                        help='(slicing) index of density mode sample(s) [integers seperated by :]')
     parser.add_argument('--average', action='store_true',default=False,
                         help='time average of the density over all selected samples with --sample , or all samples if --sample is not given')
     parser.add_argument('--group', type=str, help='particle group [Default: use first group]')
