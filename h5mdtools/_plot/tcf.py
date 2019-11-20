@@ -61,16 +61,16 @@ def plot(args):
                     raise SystemExit("Correlation function not eligible for parameter slicing")
                 s = slice(*args.slice)
                 y = y[..., s]
-                if yerr != None:
+                if yerr is not None:
                     yerr = yerr[..., s]
-                if parameter != None:
+                if parameter is not None:
                     parameter = parameter[s]
 
             # convert to NumPy arrays before closing the HDF5 file
             y = np.asarray(y)
-            if yerr != None:
+            if yerr is not None:
                 yerr = np.asarray(yerr)
-            if parameter != None:
+            if parameter is not None:
                 parameter = np.asarray(parameter)
 
         # blockwise normalisation
@@ -83,33 +83,33 @@ def plot(args):
             elif len(x.shape) == 2:
                 norm = norm.reshape((y.shape[0],) + (1,) + y.shape[2:])
             y = y / norm
-            if yerr != None:
+            if yerr is not None:
                 yerr = yerr / norm
             assert((y[np.where(x==0)] == 1).all)
 
         # flatten time coordinate due to block structure
         y = y.reshape((-1,) + y.shape[len(x.shape):])
-        if yerr != None:
+        if yerr is not None:
             yerr = yerr.reshape((-1,) + yerr.shape[len(x.shape):])
         x = x.flatten()
 
         # sort data by ascending time
         idx = x.argsort(kind='mergesort')
         x, y = x[idx], y[idx]
-        if yerr != None:
+        if yerr is not None:
             yerr = yerr[idx]
 
-        if parameter == None or len(parameter) == 1:
+        if parameter is None or len(parameter) == 1:
             c = args.colors[i % len(args.colors)] # cycle plot color
             ax.plot(x, y, color=c, label=fn)
-            if yerr != None:
+            if yerr is not None:
                 ax.errorbar(x, y, yerr=yerr, color=c, mec=c, mfc=c)
         else:
             for j,p in enumerate(parameter):
                 c = args.colors[j % len(args.colors)] # cycle plot color
                 label = (i == 0) and '{0:3g}'.format(p) or None
                 ax.plot(x, y[:, j], color=c, label=label)
-                if yerr != None:
+                if yerr is not None:
                     ax.errorbar(x, y[:, j], yerr=yerr[:, j], color=c, mec=c, mfc=c)
 
     if args.legend or not args.small:
