@@ -19,6 +19,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
+from .._common import dset_abbrev
+
 def plot(args):
     """
     Plot time correlation functions
@@ -33,12 +35,6 @@ def plot(args):
     ax = plot.axes()
 
     # translate abbreviations for dataset name
-    dset_abbrev = {
-        'MSD': 'mean_square_displacement',
-        'MQD': 'mean_quartic_displacement',
-        'VACF': 'velocity_autocorrelation',
-        'ISF': 'intermediate_scattering_function',
-    }
     if not args.type and not args.dataset:
         raise SystemExit('Either of the options --type or --dataset is required.')
     dset = args.type and dset_abbrev[args.type] or args.dataset

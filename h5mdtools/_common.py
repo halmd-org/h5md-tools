@@ -21,5 +21,9 @@ dset_abbrev = {
     'VX': 'center_of_mass_velocity',
     'VY': 'center_of_mass_velocity',
     'VZ': 'center_of_mass_velocity',
+    'MSD': 'mean_square_displacement',
+    'MQD': 'mean_quartic_displacement',
+    'VACF': 'velocity_autocorrelation',
+    'ISF': 'intermediate_scattering_function',
 }
 
