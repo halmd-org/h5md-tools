@@ -39,7 +39,7 @@ def plot(args):
     import h5py
     from matplotlib import pyplot as plt
     import h5mdtools._plot.label
-    from numpy import abs, mean, log10, logspace, reshape, where
+    from numpy import abs, array, mean, log10, logspace, reshape, savetxt, where
     #from matplotlib import ticker
     # import ssf
 
@@ -144,7 +144,8 @@ def plot(args):
         # write plot data to file
         if args.dump:
             f = open(args.dump, 'a')
-            print >>f, '# %s, sample %s' % (label.replace(r'\_', '_'), args.sample)
+            print >>f, '# %s' % (label.replace(r'\_', '_'))
+            print >>f, '# sample: %s, flavour: %s' % (args.sample, '/'.join(args.flavour))
             if 'S_q_err' in locals():
                 print >>f, '# q   S_q   S_q_err'
                 savetxt(f, array((q, S_q, S_q_err)).T)
@@ -199,10 +200,8 @@ def load_ssf(H5data, args):
     import re
     from numpy import floor, mean, reshape, sqrt, sum, var
 
-    idx = [int(x) for x in re.split(':', args.sample)]
-    if len(idx) == 1:
-        idx = idx + [idx[0] + 1,]
-    ssf = H5data['value'][idx[0]:idx[1]]
+    idx = slice(*[int(x) for x in re.split(':', args.sample)])
+    ssf = H5data['value'][idx]
 
     # compute mean
     S_q = mean(ssf[..., 0], axis=0)
@@ -233,11 +232,9 @@ def ssf_from_trajectory(H5data, param, args):
 
     # read periodically extended particle positions,
     # read one or several samples, convert to single precision
-    idx = [int(x) for x in re.split(':', args.sample)]
-    if len(idx) == 1:
-        idx = idx + [idx[0] + 1,]
+    idx = slice(*[int(x) for x in re.split(':', args.sample)])
     samples = array(
-        H5data['value'][idx[0]:idx[1]]
+        H5data['value'][idx]
       , dtype=float32
     )
     # positional coordinates dimension
