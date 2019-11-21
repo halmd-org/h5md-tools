@@ -12,6 +12,7 @@ dset_abbrev = {
     'PRESS': 'pressure',
     'TEMP': 'temperature',
     'DENS': 'density',
+    'NPART': 'particle_number',
     'EPOT': 'potential_energy',
     'EKIN': 'kinetic_energy',
     'EINT': 'internal_energy',
