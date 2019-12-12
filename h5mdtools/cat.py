@@ -124,9 +124,9 @@ def main(args):
         position = ()
         for i,(f,r,v,m,s) in enumerate(input):
             L = box_length[i]
-            r_ = (r[args.sample]+.5*L) % L # map positions back to a positive simulation box
+            r_ =((r[args.sample]+.5*L) % L)-.5*L # map positions back to a 0-centered simulation box
             r_[..., args.axis] *= 1 - args.spacing / L[args.axis] # compress to allow for spacing
-            r_[..., args.axis] += shift
+            r_[..., args.axis] += shift+.5*L
             position += (r_,)
             shift += box_length[i][args.axis]
         position = concatenate(position)
