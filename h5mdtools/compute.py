@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright © 2010-2014 Felix Höfling
+# Copyright © 2010-2019 Felix Höfling
 #
-# compute - compute time averages of macroscopic state variables
-# from the 'observables' group of an H5MD file
+# compute - compute time-averaged statistics of macroscopic (thermodynamic)
+# state variables from the 'observables' group of an H5MD file
 #
 
 def main(args):
@@ -94,20 +94,25 @@ def main(args):
         dimension = H5.attrs['dimension']
         npart = H5['particle_number']
         if type(npart) == h5py.Group:
-            raise SystemExit("a variable particle number is not supported")
-        npart = npart[()]
+            npart = int(round(mean(npart['value'][args.skip:])))
+        else:
+            npart = npart[()]
 
         if not 'density' in H5.keys():
             raise SystemExit("missing H5MD element {0:s}/density in file: {1:s}".format(H5.name, fn))
         density = H5['density']
         if type(density) == h5py.Group:
-            raise SystemExit("a variable particle density is not supported")
-        density = density[()]
+            density = mean(density['value'][args.skip:])
+        else:
+            density = density[()]
 
         cutoff = float('NaN')
 
         if args.table:
-            print '# {0}, skip={1}'.format(path.basename(fn), args.skip)
+            if args.group:
+                print '# {0}, group: {1}, skip={2}'.format(path.basename(fn), args.group, args.skip)
+            else:
+                print '# {0}, skip={1}'.format(path.basename(fn), args.skip)
             print '  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart),
         else:
             print 'Filename: %s' % path.basename(fn)
