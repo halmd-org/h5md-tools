@@ -52,7 +52,7 @@ def main(args):
                     if len(idx) > 0 and idx[0] != args.axis % dimension:
                         raise SystemExit('Box edges perpendicular to concatenation axis must match')
                         
-                input += [(f, H5in['position/value'], H5in['velocity/value'], H5in['mass/value'], H5in['species/value'])]
+                input += [(f, H5in['position/value'], H5in['velocity/value'], H5in['mass/value'])]#, H5in['species/value'])]
                   
                 box_vector += [f['particles/all/box/edges'][:]]
                 box_length += [sqrt(sum(f['particles/all/box/edges'][:]**2,axis=0))] 
@@ -66,7 +66,7 @@ def main(args):
         box_length_out[args.axis] = sum(array(box_length)[:, args.axis])
         # output particle numbers and box extents
         if args.verbose:
-            for i, (f,r,v,m,s) in enumerate(input):
+            for i, (f,r,v,m) in enumerate(input):
                 print 'input file #{0:d}: {1:s}'.format(i+1, f.filename)
                 
             #print 'Use phase space sample {0}'.format(args.sample)
@@ -75,7 +75,7 @@ def main(args):
             print 'Introduce spacing of {0} by compression'.format(args.spacing)
             print '\n    particles   box extents'
             npart = 0
-            for i, (f,r,v,m,s) in enumerate(input):
+            for i, (f,r,v,m) in enumerate(input):
                 print '#{0:d}: {1:8d}   {2}'.format(i+1, r.shape[1], box_length[i])
                 npart += r.shape[1]
             print '\n=>  {0:8d}   {1}'.format(npart, box_length_out)
@@ -91,7 +91,7 @@ def main(args):
         H5out = of.create_group('particles/all')
 
         # copy group 'h5md' from first input file # FIXME these entries should be updated
-        (f,r,v,m,s) = input[0]
+        (f,r,v,m) = input[0]
         H5in = f['particles/all']
         f.copy('h5md', of)
         # copy group 'box'
@@ -103,17 +103,17 @@ def main(args):
         ds = group.create_dataset('time', data=(H5in['position/time'][shape[0]-1],), maxshape=(None,))
         H5out.require_group('velocity')['time'] = ds # make hard link
         H5out.require_group('mass')['time'] = ds 
-        H5out.require_group('species')['time'] = ds 
+        #H5out.require_group('species')['time'] = ds 
         
         ds = group.create_dataset('step', data=(H5in['position/step'][shape[0]-1],), maxshape=(None,))
         H5out.require_group('velocity')['step'] = ds
         H5out.require_group('mass')['step'] = ds
-        H5out.require_group('species')['step'] = ds
+        #H5out.require_group('species')['step'] = ds
 
         
         # store input file names and spacing parameter
         group = of.create_group('h5md_cat/input')
-        group.attrs.create('files', array([basename(f.filename) for (f,r,v,m,s) in input]), dtype=h5py.new_vlen(str))
+        group.attrs.create('files', array([basename(f.filename) for (f,r,v,m) in input]), dtype=h5py.new_vlen(str))
         group.attrs.create('spacing', args.spacing)
 
         # concatenate positions:
@@ -122,11 +122,11 @@ def main(args):
         box_offset = shift + .5 * box_length[0][args.axis]
 
         position = ()
-        for i,(f,r,v,m,s) in enumerate(input):
+        for i,(f,r,v,m) in enumerate(input):
             L = box_length[i]
             r_ =((r[args.sample]+.5*L) % L)-.5*L # map positions back to a 0-centered simulation box
             r_[..., args.axis] *= 1 - args.spacing / L[args.axis] # compress to allow for spacing
-            r_[..., args.axis] += shift+.5*L
+            r_[..., args.axis] += shift+.5*L[args.axis] ###
             position += (r_,)
             shift += box_length[i][args.axis]
         position = concatenate(position)
@@ -137,25 +137,25 @@ def main(args):
         )
 
         # concatenate velocities
-        velocity = concatenate([v[args.sample] for (f,r,v,m,s) in input])
+        velocity = concatenate([v[args.sample] for (f,r,v,m) in input])
         H5out.require_group('velocity').create_dataset(
             'value', data=(velocity,),
             maxshape=(None,) + velocity.shape, dtype=input[0][2].dtype,
         )
 
         # concatenate masses
-        mass = concatenate([m[args.sample] for (f,r,v,m,s) in input])
+        mass = concatenate([m[args.sample] for (f,r,v,m) in input])
         H5out.require_group('mass').create_dataset(
             'value', data=(mass,),
             maxshape=(None,) + mass.shape, dtype=input[0][3].dtype,
         )
         
         # concatenate species
-        species = concatenate([s[args.sample] for (f,r,v,m,s) in input])
-        H5out.require_group('species').create_dataset(
-            'value', data=(species,),
-            maxshape=(None,) + species.shape, dtype=input[0][4].dtype,
-        )
+        #species = concatenate([s[args.sample] for (f,r,v,m) in input])
+        #H5out.require_group('species').create_dataset(
+        #    'value', data=(species,),
+        #    maxshape=(None,) + species.shape, dtype=input[0][4].dtype,
+        #)
         
         
         # update box length, particle number, and average density
@@ -165,14 +165,14 @@ def main(args):
 
         of['particles/all/box/edges'][args.axis, args.axis] = box_length_out[args.axis]
         ds = group.create_dataset('offset', data=(box_offset,), maxshape=(None,))
-        H5out.require_group('box')['offset']=ds
+        #H5out.require_group('box')['offset']=ds
 
 
         of.close()
 
     finally:
         # close files
-        for (f,r,v,m,s) in input:
+        for (f,r,v,m) in input:
             f.close()
 
 def add_parser(subparsers):
