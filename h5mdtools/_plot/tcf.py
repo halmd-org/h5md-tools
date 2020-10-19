@@ -102,6 +102,8 @@ def plot(args):
         if parameter is None or len(parameter) == 1:
             c = args.colors[i % len(args.colors)] # cycle plot color
             ax.plot(x, y, color=c, label=fn)
+            if args.axes == 'loglog' or args.axes == 'ylog':
+                ax.plot(x, -y, '--', color=c)     # plot negative values
             if yerr is not None:
                 ax.errorbar(x, y, yerr=yerr, color=c, mec=c, mfc=c)
         else:
@@ -109,6 +111,8 @@ def plot(args):
                 c = args.colors[j % len(args.colors)] # cycle plot color
                 label = (i == 0) and '{0:3g}'.format(p) or None
                 ax.plot(x, y[:, j], color=c, label=label)
+                if args.axes == 'loglog' or args.axes == 'ylog':
+                    ax.plot(x, -y, '--', color=c)     # plot negative values
                 if yerr is not None:
                     ax.errorbar(x, y[:, j], yerr=yerr[:, j], color=c, mec=c, mfc=c)
 
