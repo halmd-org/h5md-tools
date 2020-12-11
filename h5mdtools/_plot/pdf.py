@@ -19,6 +19,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
+from __future__ import print_function
+
 """
 Compute and plot pair distribution function g(r)
 """
@@ -110,14 +112,14 @@ def plot(args):
         # write plot data to file
         if args.dump:
             f = open(args.dump, 'a')
-            print >>f, '# %s, sample %s' % (label.replace(r'\_', '_'), args.sample)
+            print('# %s, sample %s' % (label.replace(r'\_', '_'), args.sample), file=f)
             if 'pdf_err' in locals():
-                print >>f, '# r   g(r)   g_err(r)'
+                print('# r   g(r)   g_err(r)', file=f)
                 savetxt(f, array((r, pdf, pdf_err)).T)
             else:
-                print >>f, '# r   g(r)'
+                print('# r   g(r)', file=f)
                 savetxt(f, array((r, pdf)).T)
-            print >>f, '\n'
+            print('\n', file=f)
             f.close()
 
     # adjust axis ranges
@@ -212,5 +214,5 @@ def add_parser(subparsers):
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
     parser.add_argument('--verbose', action='store_true')
-    parser.set_defaults(flavour=('A', 'A'), sample='0', bins=50, )
+    parser.set_defaults(flavour=('A', 'A'), sample='0', bins=50,)
 

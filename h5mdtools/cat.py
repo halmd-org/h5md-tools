@@ -9,13 +9,15 @@
 # Currently, only a single particle species is supported.
 #
 
+from __future__ import print_function
+
 def main(args):
     from numpy import array, concatenate, prod, where, cross, sum, sqrt 
     from os.path import basename
     import h5py
 
     if len(args.input) < 2:
-        print 'Need 2 input files at least'
+        print('Need 2 input files at least')
         return
 
     try:
@@ -27,7 +29,7 @@ def main(args):
             try:
                 f = h5py.File(fn, 'r')
             except IOError:
-                print 'Failed to open H5MD file: {0}. Skipped'.format(fn)
+                print('Failed to open H5MD file: {0}. Skipped'.format(fn))
                 continue
             H5in = f['particles/all']
 
@@ -67,18 +69,18 @@ def main(args):
         # output particle numbers and box extents
         if args.verbose:
             for i, (f,r,v,m) in enumerate(input):
-                print 'input file #{0:d}: {1:s}'.format(i+1, f.filename)
+                print('input file #{0:d}: {1:s}'.format(i+1, f.filename))
                 
             #print 'Use phase space sample {0}'.format(args.sample)
             axis_name = { 0: '1st', 1: '2nd', 2: '3rd', 3: '4th', -1: 'last' }
-            print 'Concatenate along {0} axis'.format(axis_name[args.axis])
-            print 'Introduce spacing of {0} by compression'.format(args.spacing)
-            print '\n    particles   box extents'
+            print('Concatenate along {0} axis'.format(axis_name[args.axis]))
+            print('Introduce spacing of {0} by compression'.format(args.spacing))
+            print('\n    particles   box extents')
             npart = 0
             for i, (f,r,v,m) in enumerate(input):
-                print '#{0:d}: {1:8d}   {2}'.format(i+1, r.shape[1], box_length[i])
+                print('#{0:d}: {1:8d}   {2}'.format(i+1, r.shape[1], box_length[i]))
                 npart += r.shape[1]
-            print '\n=>  {0:8d}   {1}'.format(npart, box_length_out)
+            print('\n=>  {0:8d}   {1}'.format(npart, box_length_out))
 
         if args.dry_run:
             return

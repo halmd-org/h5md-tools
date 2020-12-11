@@ -53,7 +53,7 @@ def main():
     try:
         plots[args.command].plot(args)
 
-    except SystemExit, status:
+    except SystemExit as status:
         exit('ERROR: %s' % status)
 
 
@@ -100,7 +100,7 @@ def parse_args():
             )
 
     subparsers = parser.add_subparsers(dest='command', help='available plot modules')
-    for plot in plots.itervalues():
+    for plot in plots.values():
         plot.add_parser(subparsers)
 
     return parser.parse_args()

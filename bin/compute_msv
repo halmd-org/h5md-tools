@@ -7,6 +7,8 @@
 # from .msv output file produced by HAL's MD package
 #
 
+from __future__ import print_function
+
 from numpy import *
 from math import pi
 import tables, argparse
@@ -49,7 +51,7 @@ def main():
             header = header + '{0:2d}:{1:11s} '.format(col + 1, 'err(' + name + ')')
             col += 2
 
-        print header[:-2]
+        print(header[:-2])
 
     # equilibrium or stationary property
     for i, fn in enumerate(args.input):
@@ -73,14 +75,14 @@ def main():
                 cutoff = 0
 
             if args.table:
-                print '# {0}, skip={1}'.format(fn, args.skip)
-                print '  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart),
+                print('# {0}, skip={1}'.format(fn, args.skip))
+                print('  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart), end=" ")
             else:
-                print 'Filename: %s' % fn
+                print('Filename: %s' % fn)
                 if cutoff > 0:
-                    print 'Cutoff: %g' % cutoff
-                print 'Particles: %d' % npart
-                print 'Density: %.4g' % density
+                    print('Cutoff: %g' % cutoff)
+                print('Particles: %d' % npart)
+                print('Density: %.4g' % density)
 
             # iterate over datasets
             for dset in args.datasets:
@@ -122,19 +124,19 @@ def main():
                 ]
 
                 if args.table:
-                    print '{0:<12.6g} {1:<10.3g} '.format(*mean_values),
-                    print '{0:<12.6g} {1:<10.3g} '.format(*std_values),
+                    print('{0:<12.6g} {1:<10.3g} '.format(*mean_values), end=" ")
+                    print('{0:<12.6g} {1:<10.3g} '.format(*std_values), end=" ")
                 else:
                     try:
                         desc = H5._v_leaves[dset_]._v_attrs.description
                     except tables.exceptions.NoSuchNodeError:
                         desc = dset.lower()
-                    print '{0:s}: {1:.4g} ± {2:.3g}'.format(
+                    print('{0:s}: {1:.4g} ± {2:.3g}'.format(
                         desc.capitalize(), mean_values[0], mean_values[1]
-                    )
-                    print '  Δ{0:s}: {1:.4g} ± {2:.3g}'.format(
+                    ))
+                    print('  Δ{0:s}: {1:.4g} ± {2:.3g}'.format(
                         dset.capitalize(), std_values[0], std_values[1]
-                    )
+                    ))
 
                 # store in dictionary for later use
                 msv_mean[dset] = mean_values
@@ -145,8 +147,8 @@ def main():
                 rc3i = 1 / pow(cutoff, 3)
                 en_corr = (8./9) * pi * density * (rc3i * rc3i - 3.) * rc3i
                 press_corr = (32./9) * pi * pow(density, 2) * (rc3i * rc3i - 1.5) * rc3i
-                print '%.5g  ' % (msv_mean['EPOT'][0] + en_corr),
-                print '%.5g  ' % (msv_mean['PRESS'][0] + press_corr)
+                print('%.5g  ' % (msv_mean['EPOT'][0] + en_corr), end=" ")
+                print('%.5g  ' % (msv_mean['PRESS'][0] + press_corr))
 
             # compute response coefficients
             if args.ensemble:
@@ -208,10 +210,10 @@ def main():
 
                 for name in coeff.keys():
                     if args.table:
-                        print '{0:<12.6g} {1:<10.3g} '.format(*coeff[name]),
+                        print('{0:<12.6g} {1:<10.3g} '.format(*coeff[name]), end=" ")
                     else:
                         desc = description[name].capitalize()
-                        print '{0:s}: {1:.4g} ± {2:.3g}'.format(desc, coeff[name][0], coeff[name][1])
+                        print('{0:s}: {1:.4g} ± {2:.3g}'.format(desc, coeff[name][0], coeff[name][1]))
                     # clear data after output
                     coeff[name] = []
 
@@ -219,8 +221,8 @@ def main():
             print
 
         except tables.exceptions.NoSuchNodeError:
-            print 'missing simulation data in file: %s' % fn
-            print 'Skipped\n'
+            print('missing simulation data in file: %s' % fn)
+            print('Skipped\n')
 
         finally:
             f.close()

@@ -20,6 +20,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
+from __future__ import print_function
+
 from .._common import dset_abbrev
 
 def plot(args):
@@ -196,7 +198,7 @@ def plot(args):
 #                        % (ylabel[1], y_mean, y_std),
 #                    transform = ax.transAxes, verticalalignment='center',
 #                    horizontalalignment='left')
-            print '%.3g ± %.3g' % (y_mean, y_std)
+            print('%.3g ± %.3g' % (y_mean, y_std))
 
     major_formatter = ticker.ScalarFormatter()
     major_formatter.set_powerlimits((-1, 2))
@@ -206,7 +208,7 @@ def plot(args):
 
     if args.legend or not args.small:
         l = ax.legend(loc=args.legend)
-        l.legendPatch.set_alpha(0.7)
+#        l.legendPatch.set_alpha(0.7)
 
     ax.axis('tight')
     if args.xlim:

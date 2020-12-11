@@ -21,8 +21,8 @@
 #
 
 import argparse
-from _plot import *
-import _plot
+from ._plot import *
+from . import _plot
 import sys
 
 def main(args):
@@ -44,7 +44,8 @@ def main(args):
 
     # set matplotlib backend
     if args.output is None:
-        matplotlib.use('GTKAgg')
+        pass
+#        matplotlib.use('GTKAgg')
     else:
         matplotlib.use('Agg')
 
@@ -52,7 +53,7 @@ def main(args):
     try:
         plots[args.plot_command].plot(args)
 
-    except SystemExit, status:
+    except SystemExit as status:
         exit('ERROR: %s' % status)
 
 def add_parser(subparsers):
@@ -96,7 +97,7 @@ def add_parser(subparsers):
             )
 
     subparsers = parser.add_subparsers(dest='plot_command', help='available plot modules')
-    for plot in plots.itervalues():
+    for plot in plots.values():
         plot.add_parser(subparsers)
 
 plots = dict([(m, sys.modules['h5mdtools._plot.%s' % m]) for m in _plot.__all__])

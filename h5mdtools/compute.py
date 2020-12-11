@@ -7,8 +7,10 @@
 # state variables from the 'observables' group of an H5MD file
 #
 
+from __future__ import print_function
+
 def main(args):
-    from _common import dset_abbrev
+    from ._common import dset_abbrev
 
     from numpy import array, concatenate, floor, linalg, mean, reshape, sqrt, std
     from math import pi
@@ -58,7 +60,7 @@ def main(args):
             header = header + '{0:2d}:{1:11s} '.format(col + 1, 'err(' + name + ')')
             col += 2
 
-        print header[:-2]
+        print(header[:-2])
 
     # equilibrium or stationary property
     for i, fn in enumerate(args.input):
@@ -110,16 +112,16 @@ def main(args):
 
         if args.table:
             if args.group:
-                print '# {0}, group: {1}, skip={2}'.format(path.basename(fn), args.group, args.skip)
+                print('# {0}, group: {1}, skip={2}'.format(path.basename(fn), args.group, args.skip))
             else:
-                print '# {0}, skip={1}'.format(path.basename(fn), args.skip)
-            print '  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart),
+                print('# {0}, skip={1}'.format(path.basename(fn), args.skip))
+            print('  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart), end=" ")
         else:
-            print 'Filename: %s' % path.basename(fn)
+            print('Filename: %s' % path.basename(fn))
             if cutoff > 0:
-                print 'Cutoff: %g' % cutoff
-            print 'Particles: %d' % npart
-            print 'Density: %.4g' % density
+                print('Cutoff: %g' % cutoff)
+            print('Particles: %d' % npart)
+            print('Density: %.4g' % density)
 
         try:
             # iterate over datasets
@@ -159,27 +161,27 @@ def main(args):
                 ]
 
                 if args.table:
-                    print '{0:<12.6g} {1:<10.3g} '.format(*mean_values),
-                    print '{0:<12.6g} {1:<10.3g} '.format(*std_values),
+                    print('{0:<12.6g} {1:<10.3g} '.format(*mean_values), end=" ")
+                    print('{0:<12.6g} {1:<10.3g} '.format(*std_values), end=" ")
                 else:
                     try:
                         desc = H5[dset].attrs['description']
                     except KeyError:
                         desc = dset.lower()
-                    print '{0:s}: {1:.4g} ± {2:.3g}'.format(
+                    print('{0:s}: {1:.4g} ± {2:.3g}'.format(
                         desc.capitalize(), mean_values[0], mean_values[1]
-                    )
-                    print '  Δ{0:s}: {1:.4g} ± {2:.3g}'.format(
+                    ))
+                    print('  Δ{0:s}: {1:.4g} ± {2:.3g}'.format(
                         dset.capitalize(), std_values[0], std_values[1]
-                    )
+                    ))
 
                 # store in dictionary for later use
                 msv_mean[dset] = mean_values
                 msv_std[dset] = std_values
 
         except KeyError:
-            print 'missing simulation data in file: %s' % fn
-            print 'Skipped\n'
+            print('missing simulation data in file: %s' % fn)
+            print('Skipped\n')
 
         finally:
             f.close()
@@ -189,8 +191,8 @@ def main(args):
             rc3i = 1 / pow(cutoff, 3)
             en_corr = (8./9) * pi * density * (rc3i * rc3i - 3.) * rc3i
             press_corr = (32./9) * pi * pow(density, 2) * (rc3i * rc3i - 1.5) * rc3i
-            print '%.5g  ' % (msv_mean['potential_energy'][0] + en_corr),
-            print '%.5g  ' % (msv_mean['pressure'][0] + press_corr)
+            print('%.5g  ' % (msv_mean['potential_energy'][0] + en_corr), end=" ")
+            print('%.5g  ' % (msv_mean['pressure'][0] + press_corr))
 
         # compute response coefficients
         if args.ensemble:
@@ -252,10 +254,10 @@ def main(args):
 
             for name in coeff.keys():
                 if args.table:
-                    print '{0:<12.6g} {1:<10.3g} '.format(*coeff[name]),
+                    print('{0:<12.6g} {1:<10.3g} '.format(*coeff[name]), end=" ")
                 else:
                     desc = description[name].capitalize()
-                    print '{0:s}: {1:.4g} ± {2:.3g}'.format(desc, coeff[name][0], coeff[name][1])
+                    print('{0:s}: {1:.4g} ± {2:.3g}'.format(desc, coeff[name][0], coeff[name][1]))
                 # clear data after output
                 coeff[name] = []
 

@@ -33,7 +33,7 @@ def main():
     try:
         tools[args.command].main(args)
 
-    except SystemExit, status:
+    except SystemExit as status:
         exit('ERROR: %s' % status)
 
 tools = dict([(m, sys.modules['h5mdtools.%s' % m]) for m in h5mdtools.__all__])
@@ -42,7 +42,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Toolset for the analysis and manipulation of H5MD files")
 
     subparsers = parser.add_subparsers(dest='command', help='available modules')
-    for tool in tools.itervalues():
+    for tool in tools.values():
         tool.add_parser(subparsers)
 
     return parser.parse_args()

@@ -20,9 +20,11 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
+from __future__ import print_function
+
 def main(args):
-    print 'Hello, World!'
-    print 'Argument list: ', args
+    print('Hello, World!')
+    print('Argument list: ', args)
 
 def add_parser(subparsers):
     subparsers.add_parser('test', help='Test dummy')

@@ -20,6 +20,8 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
+from __future__ import print_function
+
 def ornstein_zernike(params, q, rho, temp):
     """
     Static structure factor in Ornstein-Zernike approximation
@@ -128,10 +130,10 @@ def plot(args):
             kappa, xi = abs(param)
             kappa_err, xi_err = param_err
             if args.verbose:
-                print 'Density: {0:g}'.format(density)
-                print 'Temperature: {0:g}'.format(temperature)
-                print 'Compressibility: {0:g} ± {1:g}'.format(kappa, kappa_err)
-                print 'Correlation length: {0:g} ± {1:g}'.format(xi, xi_err)
+                print('Density: {0:g}'.format(density))
+                print('Temperature: {0:g}'.format(temperature))
+                print('Compressibility: {0:g} ± {1:g}'.format(kappa, kappa_err))
+                print('Correlation length: {0:g} ± {1:g}'.format(xi, xi_err))
 
             if args.axes == 'loglog' or args.axes == 'xlog':
                 xmin = args.xlim and args.xlim[0] or 0.01
@@ -144,15 +146,15 @@ def plot(args):
         # write plot data to file
         if args.dump:
             f = open(args.dump, 'a')
-            print >>f, '# %s' % (label.replace(r'\_', '_'))
-            print >>f, '# sample: %s, flavour: %s' % (args.sample, '/'.join(args.flavour))
+            print('# %s' % (label.replace(r'\_', '_')), file=f)
+            print('# sample: %s, flavour: %s' % (args.sample, '/'.join(args.flavour)), file=f)
             if 'S_q_err' in locals():
-                print >>f, '# q   S_q   S_q_err'
+                print('# q   S_q   S_q_err', file=f)
                 savetxt(f, array((q, S_q, S_q_err)).T)
             else:
-                print >>f, '# q   S_q'
+                print('# q   S_q', file=f)
                 savetxt(f, array((q, S_q)).T)
-            print >>f, '\n'
+            print('\n', file=f)
             f.close()
 
     # optionally plot power laws
@@ -274,7 +276,7 @@ def ssf_from_trajectory(H5data, param, args):
             q_list.append(q_)
             q_range.append(q_val)
             if args.verbose:
-                print '|q| = %.2f\t%4d vectors' % (q_val, len(q_))
+                print('|q| = %.2f\t%4d vectors' % (q_val, len(q_)))
     # adjust nq to actual number of wavenumbers
     nq = len(q_range)
     q_range = array(q_range)
@@ -308,18 +310,18 @@ def ssf_from_trajectory(H5data, param, args):
     if args.cuda and args.profiling:
         diff = abs(S_q - S_q2) / S_q
         idx = where(diff > 1e-6)
-        print diff[idx], '@', q_range[idx]
+        print(diff[idx], '@', q_range[idx])
 
-        print 'Copying: %.3f ms' % (1e3 * timer_copy)
-        print 'Memory allocation: %.3f ms' % (1e3 * timer_memory)
-        print 'Exponential: %.3f ms' % (1e3 * timer_exp)
-        print 'Summation: %.3f ms' % (1e3 * timer_sum)
-        print 'Overhead: %.3f ms' % (1e3 * (timer_gpu - \
-                (timer_copy + timer_memory + timer_exp + timer_sum)))
+        print('Copying: %.3f ms' % (1e3 * timer_copy))
+        print('Memory allocation: %.3f ms' % (1e3 * timer_memory))
+        print('Exponential: %.3f ms' % (1e3 * timer_exp))
+        print('Summation: %.3f ms' % (1e3 * timer_sum))
+        print('Overhead: %.3f ms' % (1e3 * (timer_gpu - \
+                (timer_copy + timer_memory + timer_exp + timer_sum))))
         print
-        print 'GPU  execution time: %.3f s' % (timer_gpu)
-        print 'Host execution time: %.3f s' % (timer_host)
-        print 'Speedup: %.1f' % (timer_host / timer_gpu)
+        print('GPU  execution time: %.3f s' % (timer_gpu))
+        print('Host execution time: %.3f s' % (timer_host))
+        print('Speedup: %.1f' % (timer_host / timer_gpu))
 
     S_q /= samples.shape[0]
 

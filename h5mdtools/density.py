@@ -21,6 +21,8 @@
 # <http://www.gnu.org/licenses/>.
 #
 
+from __future__ import print_function
+
 import h5py
 import numpy as np
 from numpy.linalg import norm
@@ -35,12 +37,12 @@ import warnings
 def get_group(h5md):
     '''Determine first particle group name'''
     try:
-	group_name=h5md['structure'].keys()[0]
+        group_name=h5md['structure'].keys()[0]
         return group_name
     except KeyError:
-        print "Could not read group_name"
-	print "H5MD-File is expected to be structured like:'structure/<group_name>/density_mode' "
-	return 0
+        print("Could not read group_name")
+        print("H5MD-File is expected to be structured like:'structure/<group_name>/density_mode' ")
+        return 0
 
 def read_density_mode_data(h5md, group):   
     full        = h5md['structure/' + group + '/density_mode']
@@ -83,7 +85,7 @@ def compute_density_map(wavevector,value,sample_of_interest,box_edges,width):
     volume=np.prod(box_edges)
     wavevector,box_edges,coord=reduce_data(wavevector,box_edges)
     # Gaussian filter, width = 0 disables the filter (gaussian = 1)
-    gaussian = np.exp( - 0.5 * width**2 * norm(wavevector,axis=1)**2 )
+    gaussian = np.exp(-0.5 * width**2 * norm(wavevector,axis=1)**2)
 
     for i in range(len(box_edges)):
         w.append(np.array(np.round(wavevector[:,i]*box_edges[i]/(2*np.pi)),dtype=int))
@@ -104,7 +106,7 @@ def compute_density_profile(wavevector,value,sample_of_interest,box_edges,width)
     volume=np.prod(box_edges)
     notused,notused2,coord=reduce_data(wavevector,box_edges)
     # Gaussian filter, width = 0 disables the filter (gaussian = 1)
-    gaussian = np.exp( - 0.5 * width**2 * norm(wavevector,axis=1)**2 )
+    gaussian = np.exp(-0.5 * width**2 * norm(wavevector,axis=1)**2)
 
     su=np.sum(wavevector**2,axis=1)
     for i in coord:
@@ -214,7 +216,7 @@ def main(args):
     for i, fn in enumerate(args.input):
         try:
             with h5py.File(fn, 'r') as h5md:
-		#Particle group
+                #Particle group
                 group= args.group or get_group(h5md)
                 if group==0:
                     return
@@ -224,7 +226,7 @@ def main(args):
                 box_edges=get_box_edges(h5md,group)
 
         except IOError:
-            print 'Failed to open H5MD file: {0}. Skipped'.format(fn)
+            print('Failed to open H5MD file: {0}. Skipped'.format(fn))
             continue
 
         #Reading from User Input 
@@ -296,34 +298,34 @@ def main(args):
         #Verbose User Information        
 
         if args.verbose:
-            print "Edge lengths of simulation box:", box_edges
-            print "Obtained density modes for {0} wavevectors, k_max = {1:.3g}".format(wavevector.shape[0], kmax)
-            print "Resulting in a spatial resolution with a smallest distance of {0:.3g}".format(np.pi/kmax)
-            print "Width of reciprocal Gaussian filter: {0:.3g}".format(width)
-            print "Corresponding to a standard deviation of the Gaussian in real space of {0:.3g}".format(2*np.pi*width)
+            print("Edge lengths of simulation box:", box_edges)
+            print("Obtained density modes for {0} wavevectors, k_max = {1:.3g}".format(wavevector.shape[0], kmax))
+            print("Resulting in a spatial resolution with a smallest distance of {0:.3g}".format(np.pi/kmax))
+            print("Width of reciprocal Gaussian filter: {0:.3g}".format(width))
+            print("Corresponding to a standard deviation of the Gaussian in real space of {0:.3g}".format(2*np.pi*width))
             if not args.map:
-                print "Computing density profile along {0}-axis".format(coordinates[coord[0]])
+                print("Computing density profile along {0}-axis".format(coordinates[coord[0]]))
             if not args.dry_run:
-                print ""
-                print 'density profile data will be written to'
+                print("")
+                print('density profile data will be written to')
                 if args.map:
-                    print 'structure/'+group+'/'+newgroup_name
-                    print ""
+                    print('structure/'+group+'/'+newgroup_name)
+                    print("")
                 else:
                     for i in coord:
-                        print 'structure/'+group+'/'+newgroup_name+coordinates[i]
+                        print('structure/'+group+'/'+newgroup_name+coordinates[i])
                     #print ""   
                 if args.average:
-                    print "the data sets 'step' and 'time' contain the information over which steps and times the average is applied"   
-                print ""
+                    print("the data sets 'step' and 'time' contain the information over which steps and times the average is applied")
+                print("")
 
             if len(box_edges)!=len(coord):
-                print "from "+ str(len(box_edges))+"-dimensional input only data of "+str(len(coord))+"-dimension has been used"
+                print("from "+ str(len(box_edges))+"-dimensional input only data of "+str(len(coord))+"-dimension has been used")
                 coordstring=" "
                 for i in range(len(coord)):
-                    coordstring+=coordinates[coord[i]]+','
-                print "the selected axis/axes is/are"+coordstring[:-1] 
-                print ""
+                    coordstring += coordinates[coord[i]] + ','
+                print("the selected axis/axes is/are" + coordstring[:-1])
+                print("")
 
 
 
@@ -393,7 +395,7 @@ def main(args):
         if args.scatter and len(args.input)<2:
             if -1 or len(step) in samplelist:
                 sc=1
-	    else: #args.sample==0:
+            else: #args.sample==0:
                 sc=0
             f = h5py.File(fn, 'r')
             pos=f['particles/'+group+'/position/value'][:]
@@ -410,7 +412,7 @@ def main(args):
                 ax.set_xlabel(r'z [$\sigma$]')
                 ax.set_ylabel(r'y [$\sigma$]')
                 ax.set_zlabel(r'x [$\sigma$]')
-                ax.view_init(azim=110,elev=25 )
+                ax.view_init(azim=110,elev=25)
                 plt.show()
             if len(box_edges)==2:
 

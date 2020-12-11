@@ -6,6 +6,8 @@
 # cut - cut out particles from a region in space
 #
 
+from __future__ import print_function
+
 def main(args):
     import h5py
     import numpy as np
@@ -21,7 +23,7 @@ def main(args):
         SystemExit("No particle trajectory in input file")
 
     # iterate over particle groups
-    for p in f["particles"].itervalues():
+    for p in f["particles"].values():
         if not "position" in p.keys() or not "box" in p.keys():
             print("Skipping particle group: {0}".format(p.name))
             continue
@@ -65,7 +67,7 @@ def main(args):
             continue
 
         # apply selection to all data arrays within particle group, except for 'box'
-        for a in p.itervalues():
+        for a in p.values():
             if not "value" in a.keys():
                 continue
 
