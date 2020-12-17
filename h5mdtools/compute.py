@@ -43,7 +43,7 @@ def main(args):
         for dset in datasets:
             # use abbreviations in table header
             if dset in dset_abbrev.values():
-                name = (k for k,v in dset_abbrev.items() if v == dset).next()
+                name = next(k for k,v in dset_abbrev.items() if v == dset)
             else:
                 name = dset
             name = name[0].upper() + name[1:].lower() # make first letter only upper case
@@ -262,7 +262,7 @@ def main(args):
                 coeff[name] = []
 
         # finish output line
-        print
+        print("")
 
 
 def add_parser(subparsers):
