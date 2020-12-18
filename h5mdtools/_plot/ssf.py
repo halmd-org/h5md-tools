@@ -425,7 +425,7 @@ def add_parser(subparsers):
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--axes', choices=['xlog', 'ylog', 'loglog'], help='logarithmic scaling')
-    parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s)')
+    parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s), 4-tuple (amplitude, exponent, xmin, xmax)')
     parser.add_argument('--fit-ornstein-zernike', action='store_true', help='fit Ornstein-Zernike form to S(q)')
     parser.add_argument('--fit-limit', type=float, help='maximum wavenumber for OZ fit')
     parser.add_argument('--cuda', action='store_true', help='use CUDA device to speed up the computation')
