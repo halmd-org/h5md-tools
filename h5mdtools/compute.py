@@ -12,7 +12,7 @@ from __future__ import print_function
 def main(args):
     from ._common import dset_abbrev
 
-    from numpy import array, concatenate, floor, linalg, mean, reshape, sqrt, std
+    from numpy import amin, array, concatenate, diff, floor, linalg, mean, reshape, sqrt, std
     from math import pi
     import h5py
     from os import path
@@ -110,6 +110,16 @@ def main(args):
 
         cutoff = float('NaN')
 
+        # determine number of samples from first dataset
+        nsample = 0
+        delta_t = float('NaN')
+        try:
+            nsample = H5[datasets[0]]['value'].shape[0]
+            delta_t = amin(diff(H5[datasets[0]]['time']))
+        except KeyError:
+            # handle errors below
+            pass
+
         if args.table:
             if args.group:
                 print('# {0}, group: {1}, skip={2}'.format(path.basename(fn), args.group, args.skip))
@@ -118,6 +128,8 @@ def main(args):
             print('  {0:<9.4g}  {1:^8g}  {2:8d}    '.format(density, cutoff, npart), end=" ")
         else:
             print('Filename: %s' % path.basename(fn))
+            if nsample > 0:
+                print('Samples: %s, Δt = %.3g' % ("[%d, %d)" % (args.skip, nsample) if args.skip else nsample, delta_t))
             if cutoff > 0:
                 print('Cutoff: %g' % cutoff)
             print('Particles: %d' % npart)
