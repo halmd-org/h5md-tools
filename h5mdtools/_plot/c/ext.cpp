@@ -31,10 +31,24 @@ static PyMethodDef methods[] = {
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
+#if PY_MAJOR_VERSION >= 3
+static PyModuleDef module = {
+    PyModuleDef_HEAD_INIT,
+    "ext",
+    "",
+    -1,
+    methods
+};
+#endif
+
 PyMODINIT_FUNC
 initext(void)
 {
-        (void) Py_InitModule("ext", methods);
-        import_array();
-}
+#if PY_MAJOR_VERSION >= 3
+    PyModule_Create(&module);
+#else
+    (void) Py_InitModule("ext", methods);
+#endif
 
+    import_array();
+}

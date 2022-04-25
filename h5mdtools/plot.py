@@ -33,7 +33,7 @@ def main(args):
     # set matplotlib defaults
     rc('font', family='serif', serif=['Computer Modern Roman'])
     rc('text', usetex=True)
-    rc('text.latex', preamble=(r'\usepackage{amsmath}', r'\usepackage{underscore}'))
+    rc('text.latex', preamble=[r'\usepackage{amsmath}', r'\usepackage{underscore}'])
     rc('legend', borderpad=0.2, labelspacing=0.01, borderaxespad=0.025, numpoints=1, fontsize=12)
     if args.a4:
         rc('figure', figsize=(11.7, 8.3))
@@ -101,4 +101,3 @@ def add_parser(subparsers):
         plot.add_parser(subparsers)
 
 plots = dict([(m, sys.modules['h5mdtools._plot.%s' % m]) for m in _plot.__all__])
-
