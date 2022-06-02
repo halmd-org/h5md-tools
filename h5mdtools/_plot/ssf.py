@@ -41,7 +41,7 @@ def plot(args):
     import h5py
     from matplotlib import pyplot as plt
     import h5mdtools._plot.label
-    from numpy import abs, array, mean, log10, logspace, reshape, savetxt, where
+    from numpy import abs, array, mean, log, log10, linspace, logspace, reshape, savetxt, where
     #from matplotlib import ticker
     # import ssf
 
@@ -116,8 +116,8 @@ def plot(args):
         if args.fit_ornstein_zernike:
             import scipy.odr as odr
 
-            density = attrs['density']
-            temperature = attrs['temperature']
+            density = attrs['density'] if 'density' in attrs.keys() else args.density
+            temperature = attrs['temperature'] if 'temperature' in attrs.keys() else args.temperature
             idx, = where(q <= args.fit_limit)
             kappa = mean(S_q[idx]) / density / temperature  # initial guess
             # result is a tuple (param, param_err, covariance_matrix)
@@ -428,6 +428,8 @@ def add_parser(subparsers):
     parser.add_argument('--power-law', type=float, nargs='+', help='plot power law curve(s), 4-tuple (amplitude, exponent, xmin, xmax)')
     parser.add_argument('--fit-ornstein-zernike', action='store_true', help='fit Ornstein-Zernike form to S(q)')
     parser.add_argument('--fit-limit', type=float, help='maximum wavenumber for OZ fit')
+    parser.add_argument('--density', type=float, help='number density for OZ fit')
+    parser.add_argument('--temperature', type=float, help='temperature for OZ fit')
     parser.add_argument('--cuda', action='store_true', help='use CUDA device to speed up the computation')
     parser.add_argument('--block-size', type=int, help='block size to be used for CUDA calls')
     parser.add_argument('--profiling', action='store_true', help='output profiling results and compare with host version')
