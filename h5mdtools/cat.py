@@ -9,7 +9,7 @@
 # Currently, only a single particle species is supported.
 #
 
-from __future__ import print_function
+
 
 def main(args):
     from numpy import array, concatenate, prod, where, cross, sum, sqrt 

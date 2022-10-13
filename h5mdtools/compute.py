@@ -7,7 +7,7 @@
 # state variables from the 'observables' group of an H5MD file
 #
 
-from __future__ import print_function
+
 
 def main(args):
     from ._common import dset_abbrev
@@ -25,7 +25,7 @@ def main(args):
     }
 
     # convert abbreviations to full qualifiers
-    datasets = [dset in dset_abbrev.keys() and dset_abbrev[dset] or dset for dset in args.datasets]
+    datasets = [dset in list(dset_abbrev.keys()) and dset_abbrev[dset] or dset for dset in args.datasets]
 
     # optional response coefficients
     coeff = {}
@@ -42,8 +42,8 @@ def main(args):
         col = 4
         for dset in datasets:
             # use abbreviations in table header
-            if dset in dset_abbrev.values():
-                name = next(k for k,v in dset_abbrev.items() if v == dset)
+            if dset in list(dset_abbrev.values()):
+                name = next(k for k,v in list(dset_abbrev.items()) if v == dset)
             else:
                 name = dset
             name = name[0].upper() + name[1:].lower() # make first letter only upper case
@@ -55,7 +55,7 @@ def main(args):
             header = header + '{0:2d}:{1:12s} '.format(col + 3, 'err(' + name + ')')
             col += 4
 
-        for name in coeff.keys():
+        for name in list(coeff.keys()):
             header = header + '{0:2d}:{1:6s} '.format(col, name)
             header = header + '{0:2d}:{1:11s} '.format(col + 1, 'err(' + name + ')')
             col += 2
@@ -79,7 +79,7 @@ def main(args):
         except (AssertionError, KeyError):
             raise SystemExit("thermodynamics module (≥ 1.0) not present in H5MD file: {0:s}".format(fn))
 
-        if not 'observables' in f.keys():
+        if not 'observables' in list(f.keys()):
             raise SystemExit("missing /observables group in file: {0:s}".format(fn))
         H5 = f['observables']
 
@@ -100,7 +100,7 @@ def main(args):
         else:
             npart = npart[()]
 
-        if not 'density' in H5.keys():
+        if not 'density' in list(H5.keys()):
             raise SystemExit("missing H5MD element {0:s}/density in file: {1:s}".format(H5.name, fn))
         density = H5['density']
         if type(density) == h5py.Group:
@@ -209,7 +209,7 @@ def main(args):
         # compute response coefficients
         if args.ensemble:
             # specific heat in the microcanonical ensemble (NVE)
-            if 'c_V' in coeff.keys() and args.ensemble == 'nve':
+            if 'c_V' in list(coeff.keys()) and args.ensemble == 'nve':
                 temp = msv_mean['temperature'][0]
                 temp_err = msv_mean['temperature'][1]
                 DeltaT = msv_std['temperature'][0]
@@ -222,7 +222,7 @@ def main(args):
                 ]
 
             # specific heat in the canonical ensemble (NVT)
-            if 'c_V' in coeff.keys() and args.ensemble == 'nvt':
+            if 'c_V' in list(coeff.keys()) and args.ensemble == 'nvt':
                 temp = msv_mean['temperature'][0]
                 temp_err = msv_mean['temperature'][1]
                 Delta_Epot = msv_std['potential_energy'][0]
@@ -240,7 +240,7 @@ def main(args):
             # isothermal compressibility in the canonical ensemble (NVT)
             #
             # the formulae look the same, but the interpretation is different
-            if not set(('chi_S','chi_T')).isdisjoint(coeff.keys()):
+            if not set(('chi_S','chi_T')).isdisjoint(list(coeff.keys())):
                 temp = msv_mean['temperature'][0]
                 temp_err = msv_mean['temperature'][1]
                 press = msv_mean['pressure'][0]
@@ -264,7 +264,7 @@ def main(args):
                 elif args.ensemble == 'nvt':
                     coeff['chi_T'] = [chi, chi_err]
 
-            for name in coeff.keys():
+            for name in list(coeff.keys()):
                 if args.table:
                     print('{0:<12.6g} {1:<10.3g} '.format(*coeff[name]), end=" ")
                 else:

@@ -20,7 +20,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
+
 
 def ornstein_zernike(params, q, rho, temp):
     """
@@ -75,7 +75,7 @@ def plot(args):
                 q = H5['wavenumber'].__array__() # store in memory by conversion to NumPy array
                 S_q, S_q_err = load_ssf(H5, args)
 
-            elif 'particles' in f.keys() and param:
+            elif 'particles' in list(f.keys()) and param:
                 # compute SSF from trajectory data
                 H5 = f['particles/' + args.flavour[0]] # FIXME support flavour[0] != flavour[1]
                 q, S_q = ssf_from_trajectory(H5['position'], param, args)
@@ -116,8 +116,8 @@ def plot(args):
         if args.fit_ornstein_zernike:
             import scipy.odr as odr
 
-            density = attrs['density'] if 'density' in attrs.keys() else args.density
-            temperature = attrs['temperature'] if 'temperature' in attrs.keys() else args.temperature
+            density = attrs['density'] if 'density' in list(attrs.keys()) else args.density
+            temperature = attrs['temperature'] if 'temperature' in list(attrs.keys()) else args.temperature
             idx, = where(q <= args.fit_limit)
             kappa = mean(S_q[idx]) / density / temperature  # initial guess
             # result is a tuple (param, param_err, covariance_matrix)
@@ -318,7 +318,7 @@ def ssf_from_trajectory(H5data, param, args):
         print('Summation: %.3f ms' % (1e3 * timer_sum))
         print('Overhead: %.3f ms' % (1e3 * (timer_gpu - \
                 (timer_copy + timer_memory + timer_exp + timer_sum))))
-        print
+        print()
         print('GPU  execution time: %.3f s' % (timer_gpu))
         print('Host execution time: %.3f s' % (timer_host))
         print('Speedup: %.1f' % (timer_host / timer_gpu))

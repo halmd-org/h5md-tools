@@ -20,7 +20,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
+
 
 from .._common import dset_abbrev
 
@@ -73,7 +73,7 @@ def plot(args):
         except (AssertionError, KeyError):
             raise SystemExit("thermodynamics module (≥ 1.0) not present in H5MD file: {0:s}".format(fn))
 
-        if not 'observables' in f.keys():
+        if not 'observables' in list(f.keys()):
             raise SystemExit("missing /observables group in file: {0:s}".format(fn))
         H5 = f['observables']
 
@@ -83,7 +83,7 @@ def plot(args):
             except KeyError:
                 raise SystemExit("missing group /observables/{0:s} in file: {1:s}".format(args.group, fn))
 
-        if not dset in H5.keys():
+        if not dset in list(H5.keys()):
             raise SystemExit("missing H5MD element {0:s}/{1:s} in file: {2:s}".format(H5.name, dset, fn))
 
         H5element = H5[dset]
@@ -296,7 +296,7 @@ def predefined_label(name):
         ],
     }
 
-    if name in label.keys():
+    if name in list(label.keys()):
         return label[name]
     else:
         return [
@@ -311,7 +311,7 @@ def add_parser(subparsers):
     parser.add_argument('input', metavar='INPUT', nargs='+', help='H5MD input file')
     parser.add_argument('--dataset', help='specify dataset')
     parser.add_argument('--group', help='specify particle group')
-    parser.add_argument('--type', choices=dset_abbrev.keys(), help='equilibrium or stationary property')
+    parser.add_argument('--type', choices=list(dset_abbrev.keys()), help='equilibrium or stationary property')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')
     parser.add_argument('--mean', action='store_true', help='plot mean and standard deviation')

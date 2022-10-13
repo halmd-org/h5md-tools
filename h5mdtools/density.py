@@ -21,7 +21,7 @@
 # <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import print_function
+
 
 import h5py
 import numpy as np
@@ -37,7 +37,7 @@ import warnings
 def get_group(h5md):
     '''Determine first particle group name'''
     try:
-        group_name=h5md['structure'].keys()[0]
+        group_name=list(h5md['structure'].keys())[0]
         return group_name
     except KeyError:
         print("Could not read group_name")
@@ -170,7 +170,7 @@ def profile_plot(mesh,density,coord):
     fig, ax = plt.subplots(ncols=len(coord),figsize=(12,4.5)) 
     plt.suptitle('mean number density profiles',y=.99)
     if len(coord)==1:
-        if isinstance(density, (list,)):
+        if isinstance(density, list):
             plt.plot(mesh[0],density[0])
         else:
             plt.plot(mesh[0],density)
@@ -188,13 +188,13 @@ def profile_plot(mesh,density,coord):
 def check_overwrite(group_name,of,group,full_dim,verbose):
     '''Check if Data already exists'''
     if verbose:
-        if group_name in of['structure/'+group].keys():
+        if group_name in list(of['structure/'+group].keys()):
             print('structure/'+group+'/'+group_name+' already exists')
             # raw_input returns the empty string for "enter"
             yes = {'yes','y', ''}
             no = {'no','n'}
             print("Overwrite "+group_name+" ? [y,n] (default yes)")
-            choice = raw_input().lower()
+            choice = input().lower()
             if choice not in yes and choice not in no :
                 print('invalid response')
                 return False

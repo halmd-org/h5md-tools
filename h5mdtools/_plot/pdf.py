@@ -19,7 +19,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 
-from __future__ import print_function
+
 
 """
 Compute and plot pair distribution function g(r)
@@ -45,7 +45,7 @@ def plot(args):
         try:
 
             # determine file type, prefer precomputed static structure factor data
-            if 'structure' in f.keys() and 'ssf' in f['structure'].keys():
+            if 'structure' in list(f.keys()) and 'ssf' in list(f['structure'].keys()):
                 import filon
                 import h5mdtools._plot.ssf as ssf
                 from scipy.constants import pi
@@ -74,7 +74,7 @@ def plot(args):
                 pdf = 1 + pdf / density # add δ-contribution
                 pdf_err = pdf_err / density
 
-            elif 'particles' in f.keys():
+            elif 'particles' in list(f.keys()):
                 # compute SSF from trajectory data
                 H5 = f['particles/' + args.flavour[0]]
                 r, pdf, pdf_err = pdf_from_trajectory(H5, args)
