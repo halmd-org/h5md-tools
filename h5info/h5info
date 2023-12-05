@@ -1,0 +1,40 @@
+#!/bin/python3
+
+import h5py
+import argparse
+
+BLUE = '\033[34m'
+RESET = '\033[0m'
+
+def print_group_structure(group, indent='', is_last=False):
+    print(indent + ('└─ ' if is_last else '├─ ') + BLUE + f"{group.name.split('/')[-1]}/" + RESET)
+    
+    keys = list(group.keys())
+    for i, key in enumerate(keys):
+        item = group[key]
+        is_last_item = (i == len(keys) - 1)
+        if isinstance(item, h5py.Group):
+            print_group_structure(item, indent + ('    ' if is_last else '│   '), is_last_item)
+        elif isinstance(item, h5py.Dataset):
+            print_dataset_info(item, indent + ('    ' if is_last else '│   '))
+
+def print_dataset_info(dataset, indent=''):
+    print(indent + f"├─ {dataset.name.split('/')[-1]}, {dataset.shape}, {dataset.dtype}")
+    
+    for attr_name, attr_value in dataset.attrs.items():
+        print(indent + f"│   Attribute: {attr_name} = {attr_value}")
+
+def print_h5_structure(file_path):
+    with h5py.File(file_path, 'r') as file:
+        print("File Structure:")
+        print_group_structure(file)
+
+def main():
+    parser = argparse.ArgumentParser(description="Print HDF5 file structure with metadata.")
+    parser.add_argument("file_path", type=str, help="Path to the HDF5 file")
+    args = parser.parse_args()
+    
+    print_h5_structure(args.file_path)
+
+if __name__ == "__main__":
+    main()
