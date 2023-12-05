@@ -7,7 +7,7 @@ from subprocess import check_output
 def parse_git_version():
     version = 'unkown'
     try:
-        version = check_output(['git', 'describe', '--always']).strip() or version
+        version = check_output(['git', 'describe', '--always']).decode('utf-8').strip() or version
     except OSError:
         pass
     return version
