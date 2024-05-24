@@ -34,7 +34,7 @@ def plot(args):
     ax = plt.axes()
     label = None
     ax.axhline(y=1, color='black', lw=0.5)
-    ax.set_color_cycle(args.colors)
+    ax.set_prop_cycle('color', args.colors)
 
     for (i, fn) in enumerate(args.input):
         try:
