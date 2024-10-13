@@ -152,7 +152,7 @@ def add_parser(subparsers):
     parser.add_argument('input', metavar='INPUT', nargs='+', help='H5MD input file')
     parser.add_argument('--dataset', help='specify dataset')
     parser.add_argument('--group', help='specify particle group')
-    parser.add_argument('--type', choices=['MSD', 'MQD', 'VACF', 'ISF'], help='time correlation function')
+    parser.add_argument('--type', choices=['MSD', 'MQD', 'VACF', 'SISF', 'ISF'], help='time correlation function')
     parser.add_argument('--slice', nargs='+', type=int, help='slicing index for the parameter, e.g., wavenumber')
     parser.add_argument('--xlim', metavar='VALUE', type=float, nargs=2, help='limit x-axis to given range')
     parser.add_argument('--ylim', metavar='VALUE', type=float, nargs=2, help='limit y-axis to given range')

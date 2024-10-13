@@ -25,6 +25,7 @@ dset_abbrev = {
     'MSD': 'mean_square_displacement',
     'MQD': 'mean_quartic_displacement',
     'VACF': 'velocity_autocorrelation',
+    'SISF': 'self-intermediate_scattering_function',
     'ISF': 'intermediate_scattering_function',
 }
 
